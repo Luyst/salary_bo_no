@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tính Lương – Tiệm Bánh</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap');
+
+    :root {
+      --cream: #f5f0e8;
+      --warm-white: #faf7f2;
+      --brown-deep: #2c1810;
+      --brown-mid: #5c3d2e;
+      --brown-light: #8b6355;
+      --caramel: #c4813a;
+      --caramel-light: #e8a855;
+      --green-soft: #4a7c59;
+      --red-soft: #b84040;
+      --border: #d4c4b0;
+      --shadow: rgba(44, 24, 16, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--cream);
+      color: var(--brown-deep);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse at 10% 0%, rgba(196, 129, 58, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 90% 100%, rgba(92, 61, 46, 0.06) 0%, transparent 50%);
+    }
+
+    header {
+      padding: 48px 40px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-end;
+      gap: 24px;
+    }
+
+    .logo-mark {
+      width: 52px;
+      height: 52px;
+      border: 2px solid var(--caramel);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .header-text h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+
+    .header-text p {
+      font-size: 11px;
+      color: var(--brown-light);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 40px 80px;
+    }
+
+    /* STEP LAYOUT */
+    .steps {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+
+    .step-card {
+      background: var(--warm-white);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 28px 32px;
+      position: relative;
+    }
+
+    .step-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 64px;
+      font-weight: 900;
+      color: var(--border);
+      position: absolute;
+      top: 8px;
+      right: 20px;
+      line-height: 1;
+      user-select: none;
+    }
+
+    .step-label {
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--caramel);
+      margin-bottom: 8px;
+    }
+
+    .step-card h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    /* DROP ZONE */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 4px;
+      padding: 32px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: transparent;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.drag-over {
+      border-color: var(--caramel);
+      background: rgba(196, 129, 58, 0.04);
+    }
+
+    .drop-zone.has-file {
+      border-color: var(--green-soft);
+      background: rgba(74, 124, 89, 0.04);
+    }
+
+    .drop-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .drop-text {
+      font-size: 12px;
+      color: var(--brown-light);
+      line-height: 1.6;
+    }
+
+    .drop-text strong {
+      color: var(--brown-deep);
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    #file-input {
+      display: none;
+    }
+
+    .file-status {
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--green-soft);
+      font-weight: 500;
+    }
+
+    /* WAGE INPUT */
+    .wage-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .wage-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .wage-label {
+      font-size: 12px;
+      color: var(--brown-mid);
+      width: 140px;
+      flex-shrink: 0;
+    }
+
+    .wage-input-wrap {
+      flex: 1;
+      position: relative;
+    }
+
+    .wage-input-wrap input {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: var(--cream);
+      color: var(--brown-deep);
+      font-family: 'DM Mono', monospace;
+      font-size: 14px;
+      padding: 10px 48px 10px 14px;
+      border-radius: 3px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .wage-input-wrap input:focus {
+      border-color: var(--caramel);
+    }
+
+    .wage-input-wrap span {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 11px;
+      color: var(--brown-light);
+    }
+
+    .rule-note {
+      font-size: 11px;
+      color: var(--brown-light);
+      line-height: 1.6;
+      padding: 12px;
+      background: rgba(196, 129, 58, 0.06);
+      border-left: 2px solid var(--caramel-light);
+      border-radius: 0 3px 3px 0;
+    }
+
+    /* CALC BUTTON */
+    .calc-btn {
+      width: 100%;
+      margin-top: 24px;
+      padding: 16px;
+      background: var(--brown-deep);
+      color: var(--cream);
+      border: none;
+      border-radius: 3px;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .calc-btn:hover {
+      background: var(--brown-mid);
+    }
+
+    .calc-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* EXPORT BUTTON */
+    .export-btn {
+      padding: 10px 16px;
+      background: var(--green-soft);
+      color: var(--cream);
+      border: none;
+      border-radius: 3px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .export-btn:hover {
+      background: #385e43;
+    }
+
+    /* RESULTS */
+    #results {
+      display: none;
+    }
+
+    .result-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .employee-tag {
+      font-size: 11px;
+      color: var(--brown-light);
+      letter-spacing: 1px;
+    }
+
+    /* SUMMARY CARDS */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .sum-card {
+      background: var(--warm-white);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .sum-card.highlight {
+      background: var(--brown-deep);
+      border-color: var(--brown-deep);
+      color: var(--cream);
+    }
+
+    .sum-card .sum-val {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .sum-card.highlight .sum-val {
+      color: var(--caramel-light);
+    }
+
+    .sum-card .sum-lbl {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--brown-light);
+    }
+
+    .sum-card.highlight .sum-lbl {
+      color: rgba(245, 240, 232, 0.6);
+    }
+
+    /* TABLE */
+    .table-wrap {
+      background: var(--warm-white);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 32px;
+    }
+
+    .table-title {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--caramel);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    thead th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--brown-light);
+      background: rgba(196, 129, 58, 0.05);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(212, 196, 176, 0.4);
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover td {
+      background: rgba(196, 129, 58, 0.03);
+    }
+
+    .td-date {
+      color: var(--brown-mid);
+      font-weight: 500;
+    }
+
+    .td-thu {
+      color: var(--brown-light);
+      font-size: 11px;
+    }
+
+    .td-time {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 2px;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-late {
+      background: rgba(184, 64, 64, 0.1);
+      color: var(--red-soft);
+    }
+
+    .badge-early {
+      background: rgba(74, 124, 89, 0.1);
+      color: var(--green-soft);
+    }
+
+    .badge-ot {
+      background: rgba(196, 129, 58, 0.12);
+      color: var(--caramel);
+    }
+
+    .badge-vang {
+      background: rgba(92, 61, 46, 0.1);
+      color: var(--brown-mid);
+    }
+
+    .badge-ok {
+      color: var(--border);
+      font-size: 10px;
+    }
+
+    .penalty {
+      color: var(--red-soft);
+    }
+
+    .bonus {
+      color: var(--green-soft);
+    }
+
+    .neutral {
+      color: var(--brown-light);
+    }
+
+    .wage-cell {
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
+    }
+
+    /* TỔNG KẾT */
+    .final-box {
+      background: var(--brown-deep);
+      color: var(--cream);
+      border-radius: 4px;
+      padding: 32px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .final-box .final-label {
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      opacity: 0.6;
+      margin-bottom: 8px;
+    }
+
+    .final-box .final-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .final-box .final-amount {
+      font-family: 'Playfair Display', serif;
+      font-size: 36px;
+      font-weight: 900;
+      color: var(--caramel-light);
+      letter-spacing: -1px;
+    }
+
+    .final-box .final-amount span {
+      font-size: 16px;
+      font-family: 'DM Mono', monospace;
+      opacity: 0.7;
+      margin-left: 6px;
+    }
+
+    .breakdown-row {
+      display: flex;
+      gap: 32px;
+      margin-top: 8px;
+    }
+
+    .breakdown-item {
+      font-size: 11px;
+      opacity: 0.7;
+    }
+
+    .breakdown-item strong {
+      opacity: 1;
+      color: var(--caramel-light);
+    }
+
+    /* EMPTY STATE */
+    .empty-note {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--brown-light);
+      font-size: 13px;
+    }
+
+    .empty-note .empty-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
+    @media (max-width: 768px) {
+      main {
+        padding: 24px 20px 60px;
+      }
+
+      .steps {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .final-box {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+      }
+
+      header {
+        padding: 28px 20px 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="logo-mark">🥐</div>
+    <div class="header-text">
+      <h1>Bảng Tính Lương</h1>
+      <p>Tiệm Bánh · Chấm Công Chi Tiết</p>
+    </div>
+  </header>
+
+  <main>
+    <div class="steps">
+      <!-- STEP 1: Upload -->
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <div class="step-label">Bước một</div>
+        <h2>Tải File Excel</h2>
+        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+          <div class="drop-icon">📂</div>
+          <div class="drop-text">
+            <strong>Kéo thả (nhiều file) hoặc nhấn để chọn</strong>
+            File .xlsx chấm công nhân viên
+          </div>
+          <div class="file-status" id="file-status"></div>
+        </div>
+        <input type="file" id="file-input" accept=".xlsx,.xls" multiple>
+      </div>
+
+      <!-- STEP 2: Lương -->
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <div class="step-label">Bước hai</div>
+        <h2>Nhập Mức Lương</h2>
+
+        <div class="wage-group">
+          <div class="wage-row">
+            <div class="wage-label">Lương / giờ</div>
+            <div class="wage-input-wrap">
+              <input type="number" id="wage-hour" placeholder="25000" value="25000">
+              <span>₫/giờ</span>
+            </div>
+          </div>
+
+          <div class="rule-note">
+            📌 <strong>Quy tắc tính:</strong><br>
+            · Cho phép đi trễ đến <strong>7:03</strong> — quá thì trừ theo phút<br>
+            · Về trước <strong>17:00</strong> → trừ lương phút thiếu<br>
+            · Về sau <strong>17:00</strong> → cộng thêm OT<br>
+            · Trừ/thưởng theo đơn giá <strong>1 phút = lương giờ ÷ 60</strong>
+          </div>
+        </div>
+
+        <button class="calc-btn" id="calc-btn" onclick="calculate()" disabled>
+          ⚡ Tính Lương Ngay
+        </button>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="results">
+      <div class="result-header">
+        <h2>Kết Quả Chi Tiết</h2>
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <select id="emp-selector" onchange="changeEmployee()" style="padding: 8px; border-radius: 4px; border: 1px solid var(--border); font-family: 'DM Mono', monospace;"></select>
+          <div class="employee-tag" id="emp-tag" style="display:none;"></div>
+          <button class="export-btn" onclick="exportDataToExcel()">📥 Xuất 1 NV</button>
+          <button class="export-btn" style="background: var(--caramel);" onclick="exportAllToZip()">📦 Xuất ZIP Tất Cả</button>
+        </div>
+      </div>
+
+      <div class="table-wrap" id="manager-summary-wrap" style="display: none; margin-bottom: 32px;">
+        <div class="table-title">TỔNG HỢP QUẢN LÝ (TẤT CẢ NHÂN VIÊN)</div>
+        <div style="overflow-x:auto">
+          <table id="manager-table">
+            <thead>
+              <tr>
+                <th>Nhân viên</th>
+                <th>Ngày Làm</th>
+                <th>Vi Phạm</th>
+                <th>Lương Gốc</th>
+                <th>Tổng Phạt</th>
+                <th>Thưởng OT</th>
+                <th>Thực Nhận</th>
+              </tr>
+            </thead>
+            <tbody id="manager-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="summary-grid" id="summary-grid"></div>
+
+      <div class="table-wrap">
+        <div class="table-title">Chi Tiết Từng Ngày</div>
+        <div style="overflow-x:auto">
+          <table id="detail-table">
+            <thead>
+              <tr>
+                <th>Ngày</th>
+                <th>Thứ</th>
+                <th>Giờ Vào</th>
+                <th>Giờ Ra</th>
+                <th>Trạng Thái</th>
+                <th>Trễ (phút)</th>
+                <th>Về (phút từ 17h)</th>
+                <th>Báo Trước</th>
+                <th>Lương Ngày</th>
+                <th>+/– (₫)</th>
+              </tr>
+            </thead>
+            <tbody id="detail-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="final-box" id="final-box"></div>
+    </div>
+
+    <div class="empty-note" id="empty-note">
+      <div class="empty-icon">🧾</div>
+      Tải file Excel lên và nhập lương giờ để bắt đầu tính
+    </div>
+  </main>
+
+    <script>
+    let allEmployeesData = [];
+    let notificationState = {}; // Key: "empName|dateStr"
+    let currentEmpIndex = 0;
+
+    // --- DRAG & DROP ---
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) processFiles(files);
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length > 0) processFiles(fileInput.files);
+    });
+
+    function processFiles(files) {
+      allEmployeesData = [];
+      notificationState = {};
+      const promises = Array.from(files).map(file => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            try {
+              const wb = XLSX.read(e.target.result, { type: 'array', cellDates: false });
+              const ws = wb.Sheets[wb.SheetNames[0]];
+              const raw = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+              resolve(parseSheet(raw, file.name));
+            } catch (err) {
+              resolve(null);
+            }
+          };
+          reader.readAsArrayBuffer(file);
+        });
+      });
+
+      Promise.all(promises).then(results => {
+        allEmployeesData = results.filter(r => r !== null && r.rows.length > 0);
+        if (allEmployeesData.length === 0) {
+          alert('Không có dữ liệu hợp lệ từ các file tải lên.');
+          return;
+        }
+
+        dropZone.classList.add('has-file');
+        document.getElementById('file-status').textContent = '✓ Đã tải thành công ' + allEmployeesData.length + ' file nhân viên';
+        document.getElementById('calc-btn').disabled = false;
+        
+        const selector = document.getElementById('emp-selector');
+        selector.innerHTML = allEmployeesData.map((emp, idx) => `<option value="${idx}">${emp.empName}</option>`).join('');
+        currentEmpIndex = 0;
+        
+        // Auto calculate when loaded
+        calculate();
+      });
+    }
+
+    function parseSheet(raw, fallbackName) {
+      let empName = 'Nhân viên';
+      for (let r of raw) {
+        if (r[0] && String(r[0]).includes('Tên nhân viên:')) {
+          const matched = String(r[0]).match(/Tên nhân viên:\s*([^\n]+)/);
+          if (matched) empName = matched[1].trim();
+          break;
+        }
+      }
+      if (empName === 'Nhân viên' && fallbackName) {
+         empName = fallbackName.replace(/\.[^/.]+$/, "");
+      }
+
+      const rows = [];
+      for (let i = 0; i < raw.length; i++) {
+        const r = raw[i];
+        if (!r[0]) continue;
+        const dateStr = String(r[0]).trim();
+        if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) continue;
+
+        const thu = r[1] ? String(r[1]).trim() : '';
+        const vao = parseTime(r[2]);
+        const ra = parseTime(r[3]);
+        const kyHieu = r[17] ? String(r[17]).trim() : '';
+        rows.push({ dateStr, thu, vao, ra, kyHieu });
+      }
+
+      return { empName, rows };
+    }
+
+    function parseTime(val) {
+      if (val === null || val === undefined || val === '') return null;
+      const s = String(val).trim();
+      const m = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+      if (m) {
+        return { h: parseInt(m[1]), m: parseInt(m[2]), s: parseInt(m[3] || 0) };
+      }
+      if (!isNaN(val) && val > 0 && val < 1) {
+        const totalSec = Math.round(val * 86400);
+        const h = Math.floor(totalSec / 3600);
+        const mn = Math.floor((totalSec % 3600) / 60);
+        const sc = totalSec % 60;
+        return { h, m: mn, s: sc };
+      }
+      return null;
+    }
+
+    function toMinutes(t) {
+      if (!t) return null;
+      return t.h * 60 + t.m + t.s / 60;
+    }
+
+    function fmtTime(t) {
+      if (!t) return '—';
+      return String(t.h).padStart(2, '0') + ':' + String(t.m).padStart(2, '0');
+    }
+
+    function fmtMoney(n) {
+      return n.toLocaleString('vi-VN') + ' ₫';
+    }
+
+    function calculate() {
+      if (allEmployeesData.length === 0) return;
+
+      const wageHour = parseFloat(document.getElementById('wage-hour').value) || 0;
+      const wageMin = wageHour / 60;
+      const ALLOW_LATE = 7 * 60 + 3;  
+      const END_NORMAL = 17 * 60;     
+      const WORK_HOURS = 10;          
+
+      allEmployeesData.forEach(emp => {
+        let totalBase = 0, totalPenalty = 0, totalBonus = 0;
+        let totalPenaltyLate = 0, totalPenaltyEarly = 0, totalBonusOT = 0;
+        let workDays = 0, lateDays = 0, earlyDays = 0, otDays = 0;
+        
+        emp.processedRows = [];
+
+        emp.rows.forEach(row => {
+          const { dateStr, thu, vao, ra, kyHieu } = row;
+          const vaoMin = toMinutes(vao);
+          const raMin = toMinutes(ra);
+
+          let lateMins = 0;
+          let diffFromEnd = 0; 
+          let baseWage = 0;
+          let adjust = 0;
+          let statusBadge = '';
+          let statusLabel = '';
+          let pLate = 0;
+          let pEarly = 0;
+          let bOT = 0;
+
+          if (!vao && !ra) {
+            if (kyHieu === 'V') { statusBadge = 'vang'; statusLabel = 'Vắng'; }
+            else { statusBadge = 'vang'; statusLabel = kyHieu || '—'; }
+          } else if (vao && !ra) {
+            statusBadge = 'vang'; statusLabel = 'Thiếu giờ ra';
+          } else {
+            workDays++;
+            baseWage = WORK_HOURS * wageHour;
+            totalBase += baseWage;
+
+            if (vaoMin !== null && vaoMin > ALLOW_LATE) {
+              lateMins = Math.round(vaoMin - ALLOW_LATE);
+              lateDays++;
+              statusBadge = 'late';
+              statusLabel = 'Trễ';
+            }
+
+            if (raMin !== null) {
+              diffFromEnd = Math.round(raMin - END_NORMAL);
+              if (diffFromEnd < 0) {
+                earlyDays++;
+                if (!statusBadge) { statusBadge = 'early'; statusLabel = 'Về sớm'; }
+                else statusLabel += ' + Về sớm';
+              } else if (diffFromEnd > 0) {
+                otDays++;
+                if (!statusBadge) { statusBadge = 'ot'; statusLabel = 'OT'; }
+                else statusLabel += ' + OT';
+              }
+            }
+
+            if (!statusBadge) { statusBadge = 'ok'; statusLabel = 'Đúng giờ'; }
+
+            if (lateMins > 0) {
+              let baseLate = lateMins * wageMin;
+              let notiKey = emp.empName + '|' + dateStr;
+              let extraLate = (notificationState[notiKey]) ? 0 : (lateMins * 3000);
+              pLate = baseLate + extraLate;
+              totalPenalty += pLate;
+              totalPenaltyLate += pLate;
+            }
+
+            if (diffFromEnd < 0) {
+              let earlyMins = Math.abs(diffFromEnd);
+              let baseEarly = earlyMins * wageMin;
+              // KHÔNG phạt 3k khi về sớm nữa, chỉ trừ lương
+              pEarly = baseEarly;
+              totalPenalty += pEarly;
+              totalPenaltyEarly += pEarly;
+            } else if (diffFromEnd > 0) {
+              bOT = diffFromEnd * wageMin;
+              totalBonus += bOT;
+              totalBonusOT += bOT;
+            }
+
+            adjust = bOT - pEarly - pLate;
+          }
+
+          emp.processedRows.push({
+             ...row, lateMins, diffFromEnd, baseWage, adjust, pLate, pEarly, bOT, statusBadge, statusLabel
+          });
+        });
+
+        const grossWage = totalBase + totalBonus - totalPenalty;
+
+        emp.stats = {
+          workDays, lateDays, earlyDays, otDays,
+          totalBase, totalPenalty, totalBonus,
+          totalPenaltyLate, totalPenaltyEarly, totalBonusOT,
+          grossWage
+        };
+      });
+
+      // Render Manager Table
+      const mBody = document.getElementById('manager-body');
+      mBody.innerHTML = allEmployeesData.map(emp => `
+        <tr>
+          <td style="font-weight:bold; color:var(--brown-deep)">${emp.empName}</td>
+          <td>${emp.stats.workDays}</td>
+          <td style="color:var(--red-soft)">${emp.stats.lateDays + emp.stats.earlyDays}</td>
+          <td>${fmtMoney(emp.stats.totalBase)}</td>
+          <td style="color:var(--red-soft)">-${fmtMoney(emp.stats.totalPenalty)}</td>
+          <td style="color:var(--green-soft)">+${fmtMoney(emp.stats.totalBonus)}</td>
+          <td style="font-weight:bold; color:var(--caramel)">${fmtMoney(emp.stats.grossWage)}</td>
+        </tr>
+      `).join('');
+
+      renderIndividualDetail();
+
+      document.getElementById('results').style.display = 'block';
+      if(allEmployeesData.length > 1) {
+         document.getElementById('manager-summary-wrap').style.display = 'block';
+      } else {
+         document.getElementById('manager-summary-wrap').style.display = 'none';
+      }
+      document.getElementById('empty-note').style.display = 'none';
+    }
+
+    function changeEmployee() {
+      currentEmpIndex = document.getElementById('emp-selector').value;
+      renderIndividualDetail();
+    }
+
+    function renderIndividualDetail() {
+      const emp = allEmployeesData[currentEmpIndex];
+      if(!emp) return;
+      const stats = emp.stats;
+
+      document.getElementById('summary-grid').innerHTML = `
+        <div class="sum-card">
+          <div class="sum-val">${stats.workDays}</div>
+          <div class="sum-lbl">Ngày làm việc</div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-val" style="color:var(--red-soft)">${stats.lateDays + stats.earlyDays}</div>
+          <div class="sum-lbl">Lần vi phạm</div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-val" style="color:var(--green-soft)">${stats.otDays}</div>
+          <div class="sum-lbl">Ngày tăng ca</div>
+        </div>
+        <div class="sum-card highlight">
+          <div class="sum-val">${fmtMoney(stats.grossWage)}</div>
+          <div class="sum-lbl">Tổng thực nhận</div>
+        </div>
+      `;
+
+      document.getElementById('final-box').innerHTML = `
+        <div>
+          <div class="final-label">Nhân viên chi tiết</div>
+          <div class="final-name">${emp.empName}</div>
+          <div class="breakdown-row">
+            <div class="breakdown-item">Lương gốc: <strong>${fmtMoney(stats.totalBase)}</strong></div>
+            <div class="breakdown-item">OT cộng: <strong>+${fmtMoney(stats.totalBonus)}</strong></div>
+            <div class="breakdown-item">Khấu trừ: <strong>-${fmtMoney(stats.totalPenalty)}</strong></div>
+          </div>
+        </div>
+        <div>
+          <div class="final-label">Thực nhận</div>
+          <div class="final-amount">${fmtMoney(stats.grossWage)}</div>
+        </div>
+      `;
+
+      const tbody = document.getElementById('detail-body');
+      tbody.innerHTML = '';
+      emp.processedRows.forEach(r => {
+        const badgeMap = { late: 'badge-late', early: 'badge-early', ot: 'badge-ot', vang: 'badge-vang', ok: 'badge-ok' };
+        const badgeClass = badgeMap[r.statusBadge] || 'badge-ok';
+
+        const lateCell = r.lateMins > 0 ? `<span class="penalty">-${r.lateMins}'</span>` : `<span class="neutral">0</span>`;
+        const endCell = r.diffFromEnd !== undefined && (r.vao || r.ra)
+          ? (r.diffFromEnd > 0 ? `<span class="bonus">+${r.diffFromEnd}'</span>` : r.diffFromEnd < 0 ? `<span class="penalty">${r.diffFromEnd}'</span>` : `<span class="neutral">0</span>`)
+          : `<span class="neutral">—</span>`;
+        const baseCell = r.baseWage > 0 ? `<span class="wage-cell">${fmtMoney(r.baseWage)}</span>` : `<span class="neutral">—</span>`;
+
+        let adjText = '';
+        if (r.adjust > 0) adjText = `<span class="bonus">+${fmtMoney(Math.abs(r.adjust))}</span>`;
+        else if (r.adjust < 0) adjText = `<span class="penalty">-${fmtMoney(Math.abs(r.adjust))}</span>`;
+        else if (r.baseWage > 0) adjText = `<span class="neutral">0</span>`;
+        else adjText = `<span class="neutral">—</span>`;
+
+        // Chỉ có đi trễ mới có ô báo trước! (yêu cầu khách: "về sớm sẽ ko phạt 3 ngàn nữa gì chắc chắn đã thông báo rồi")
+        const hasPenalty = (r.lateMins > 0);
+        const notiKey = emp.empName + '|' + r.dateStr;
+        const checkboxHtml = hasPenalty ? `<input type="checkbox" onchange="toggleNotification('${emp.empName}', '${r.dateStr}')" ${notificationState[notiKey] ? 'checked' : ''} title="Có báo trước">` : `<span class="neutral">—</span>`;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="td-date">${r.dateStr}</td>
+          <td class="td-thu">${r.thu}</td>
+          <td class="td-time">${fmtTime(r.vao)}</td>
+          <td class="td-time">${fmtTime(r.ra)}</td>
+          <td><span class="badge ${badgeClass}">${r.statusLabel}</span></td>
+          <td>${lateCell}</td>
+          <td>${endCell}</td>
+          <td>${checkboxHtml}</td>
+          <td>${baseCell}</td>
+          <td>${adjText}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function toggleNotification(empName, dateStr) {
+      const key = empName + '|' + dateStr;
+      if (!notificationState) notificationState = {};
+      notificationState[key] = !notificationState[key];
+      calculate();
+    }
+
+    function buildEmployeeWorkbook(emp) {
+      const stats = emp.stats;
+      const wb = XLSX.utils.book_new();
+
+      const summaryData = [
+        ["Tên nhân viên", emp.empName],
+        ["Tổng bị trừ do đi trễ (-)", stats.totalPenaltyLate || 0],
+        ["Tổng bị trừ khi về sớm (-)", stats.totalPenaltyEarly || 0],
+        ["Tổng được cộng tăng ca (+)", stats.totalBonusOT || 0],
+        ["Tổng lương gốc", stats.totalBase || 0],
+        ["Tổng khấu trừ", stats.totalPenalty || 0],
+        ["Tổng lương thực nhận", stats.grossWage || 0]
+      ];
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, wsSummary, "Tổng Kết");
+
+      const detailData = [
+        ["Ngày", "Thứ", "Giờ Vào", "Giờ Ra", "Trạng Thái", "Trễ (phút)", "Về (phút từ 17h)", "Báo Trước", "Lương Ngày", "+/– (₫)"]
+      ];
+      emp.processedRows.forEach(r => {
+        let notiText = (r.lateMins > 0) ? (notificationState[emp.empName + '|' + r.dateStr] ? "Có" : "Không") : "—";
+        detailData.push([
+          r.dateStr, r.thu, fmtTime(r.vao), fmtTime(r.ra), r.statusLabel,
+          r.lateMins || 0, r.diffFromEnd || 0, notiText, r.baseWage || 0, r.adjust || 0
+        ]);
+      });
+      const wsDetail = XLSX.utils.aoa_to_sheet(detailData);
+      XLSX.utils.book_append_sheet(wb, wsDetail, "Chi tiết");
+
+      return wb;
+    }
+
+    function exportDataToExcel() {
+      if (allEmployeesData.length === 0) return;
+      const emp = allEmployeesData[currentEmpIndex];
+      const wb = buildEmployeeWorkbook(emp);
+      XLSX.writeFile(wb, `BangLuong_${emp.empName.replace(/\s+/g, '_')}.xlsx`);
+    }
+
+    async function exportAllToZip() {
+      if (allEmployeesData.length === 0) return;
+      if (typeof JSZip === 'undefined' || typeof saveAs === 'undefined') {
+         alert("Đang tải thư viện Zip, vui lòng đợi giây lát rồi thử lại.");
+         return;
+      }
+      
+      const zip = new JSZip();
+      
+      const managerData = [
+        ["Tên nhân viên", "Ngày làm việc", "Lần vi phạm (Trễ/Sớm)", "Lương gốc", "Tổng phạt", "Tổng tăng ca", "Thực nhận"]
+      ];
+      allEmployeesData.forEach(emp => {
+        managerData.push([
+          emp.empName,
+          emp.stats.workDays,
+          emp.stats.lateDays + emp.stats.earlyDays,
+          emp.stats.totalBase,
+          emp.stats.totalPenalty,
+          emp.stats.totalBonusOT,
+          emp.stats.grossWage
+        ]);
+      });
+      const wbMgr = XLSX.utils.book_new();
+      const wsMgr = XLSX.utils.aoa_to_sheet(managerData);
+      XLSX.utils.book_append_sheet(wbMgr, wsMgr, "TongHopQuanLy");
+      
+      // Write array instead of array buffer or base64
+      const mgrExcelBuffer = XLSX.write(wbMgr, { bookType: "xlsx", type: "array" });
+      zip.file("BangLuong_TongHopQuanLy.xlsx", mgrExcelBuffer);
+
+      allEmployeesData.forEach(emp => {
+         const wb = buildEmployeeWorkbook(emp);
+         const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+         zip.file(`BangLuong_${emp.empName.replace(/\s+/g, '_')}.xlsx`, excelBuffer);
+      });
+
+      const content = await zip.generateAsync({ type: "blob" });
+      saveAs(content, "TatCaNhanVien_XuatZIP.zip");
+    }
+  </script>
+</body>
+
+</html>
