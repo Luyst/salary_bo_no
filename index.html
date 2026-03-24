@@ -282,11 +282,26 @@ let dateBonus = []; // [{date, amount, note}]
 let currentEmpIndex = 0;
 
 // ─ Date Bonus ─
+function normalizeDateStr(raw) {
+  // Chấp nhận: 8/3/2025 | 08/03/2025 | 8/3/25 → DD/MM/YYYY
+  const s = raw.trim().replace(/[-\.]/g, '/');
+  const p = s.split('/');
+  if (p.length !== 3) return null;
+  let [d, m, y] = p.map(Number);
+  if (isNaN(d)||isNaN(m)||isNaN(y)) return null;
+  if (y < 100) y += 2000; // 25 → 2025
+  if (d<1||d>31||m<1||m>12) return null;
+  return String(d).padStart(2,'0')+'/'+String(m).padStart(2,'0')+'/'+y;
+}
 function addDateBonus() {
-  const dt  = (document.getElementById('db-date').value||'').trim();
+  const rawDt = (document.getElementById('db-date').value||'').trim();
   const amt = parseFloat(document.getElementById('db-amount').value)||0;
   const nt  = (document.getElementById('db-note').value||'').trim();
-  if (!dt || !amt) { alert('Nhập ngày và số tiền'); return; }
+  if (!rawDt || !amt) { alert('Nhập ngày và số tiền'); return; }
+  const dt = normalizeDateStr(rawDt);
+  if (!dt) { alert('Ngày không hợp lệ. Nhập dạng DD/MM/YYYY\nVí dụ: 8/3/2025 hoặc 08/03/2025'); return; }
+  // Cập nhật input hiển thị ngày đã chuẩn hóa
+  document.getElementById('db-date').value = dt;
   dateBonus.push({date:dt, amount:amt, note:nt});
   document.getElementById('db-amount').value='';
   document.getElementById('db-note').value='';
