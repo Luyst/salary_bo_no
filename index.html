@@ -585,19 +585,22 @@ function calculate() {
 
           diffFromEnd=Math.round(raMin-shift.end);
           if(diffFromEnd<0){earlyDays++;if(!statusBadge){statusBadge='early';statusLabel='Về sớm';}else statusLabel+=' + Về sớm';}
-          else if(diffFromEnd>0){otDays++;if(!statusBadge){statusBadge='ot';statusLabel='OT';}else statusLabel+=' + OT';
+          else if(diffFromEnd>0){
             if(role==='lam_banh'){
-              // Tier1: 0-60ph sau ca (1x, đã trong baseWage) | Tier2: >60ph (2x, cần extra 1x)
+              // Bếp: luôn tính OT badge + phân tầng
+              otDays++;if(!statusBadge){statusBadge='ot';statusLabel='OT';}else statusLabel+=' + OT';
               const tier1Mins=Math.min(diffFromEnd,60);
               const tier2Mins=Math.max(0,diffFromEnd-60);
               otEarnings=(tier1Mins+tier2Mins*2)*wageMin;
-              const otPremium=tier2Mins*wageMin; // extra 1x cho tier2
+              const otPremium=tier2Mins*wageMin;
               totalOTEarnings+=otEarnings; perBranch[br].otEarnings+=otEarnings;
               totalOTPremium+=otPremium;    perBranch[br].otPremium+=otPremium;
             } else if(isHoliday){
-              // Bán hàng ngày lễ: OT về trễ (1x, đã trong base, chỉ theo dõi)
+              // Bán hàng ngày lễ: OT badge + theo dõi
+              otDays++;if(!statusBadge){statusBadge='ot';statusLabel='OT';}else statusLabel+=' + OT';
               otEarnings=diffFromEnd*wageMin; totalOTEarnings+=otEarnings; perBranch[br].otEarnings+=otEarnings;
             }
+            // Bán hàng ngày thường: diffFromEnd > 0 nhưng không note, không tính tiền
           }
           // Bán hàng ngày lễ: theo dõi OT đến sớm (1x, đã trong base)
           if(role==='ban_hang'&&isHoliday&&vaoMin<shift.start){
