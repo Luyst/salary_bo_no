@@ -528,7 +528,7 @@ function mergeEmployees(list) {
 function calculate() {
   if (!allEmployeesData.length) return;
   const defaultWage   = parseFloat(document.getElementById('default-wage').value)||22000;
-  const defaultRole   = document.getElementById('role-select')?.value || 'ban_hang';
+  const defaultRole   = 'ban_hang';
 
   allEmployeesData.forEach(emp => {
     const wageHour = wageState[emp.empName]??defaultWage;
@@ -536,7 +536,7 @@ function calculate() {
     const role=roleState[emp.empName]||defaultRole;
     let totalBase=0,totalPenalty3k=0,totalBonusExtra=0,totalShifts=0;
     let workDays=0,lateDays=0,earlyDays=0,otDays=0;
-    let totalOTEarnings=0,totalLateDeduct=0,totalExpectedSalary=0;
+    let totalOTEarnings=0,totalOTPremium=0,totalLateDeduct=0,totalExpectedSalary=0;
     const perBranch={};
     emp.processedRows=[];
 
@@ -548,7 +548,7 @@ function calculate() {
       const notiKey=emp.empName+'|'+dateStr;
       const manualBonus=bonusState[notiKey]||0;
       const overrideRa=clockOutOverride[notiKey];
-      if(!perBranch[br]) perBranch[br]={shifts:0,otEarnings:0,lateDeduct:0,bonusExtra:0,penalty3k:0,expectedSalary:0,workDays:0};
+      if(!perBranch[br]) perBranch[br]={shifts:0,otEarnings:0,otPremium:0,lateDeduct:0,bonusExtra:0,penalty3k:0,expectedSalary:0,workDays:0};
 
       // Apply clock-out override if vao exists but ra missing
       if(vao&&!ra&&overrideRa) ra=overrideRa;
@@ -587,9 +587,20 @@ function calculate() {
           diffFromEnd=Math.round(raMin-shift.end);
           if(diffFromEnd<0){earlyDays++;if(!statusBadge){statusBadge='early';statusLabel='Về sớm';}else statusLabel+=' + Về sớm';}
           else if(diffFromEnd>0){otDays++;if(!statusBadge){statusBadge='ot';statusLabel='OT';}else statusLabel+=' + OT';
-            // Bếp/làm bánh: luôn tính OT. Bán hàng: chỉ tính khi ngày lễ
-            if(role!=='ban_hang'||isHoliday){otEarnings=diffFromEnd*wageMin;totalOTEarnings+=otEarnings;perBranch[br].otEarnings+=otEarnings;}}
-          // Bán hàng ngày lễ: cộng thêm OT phần đến sớm trước giờ ca
+            if(role==='lam_banh'){
+              // Tier1: 0-60ph sau ca (1x, đã trong baseWage) | Tier2: >60ph (2x, cần extra 1x)
+              const tier1Mins=Math.min(diffFromEnd,60);
+              const tier2Mins=Math.max(0,diffFromEnd-60);
+              otEarnings=(tier1Mins+tier2Mins*2)*wageMin;
+              const otPremium=tier2Mins*wageMin; // extra 1x cho tier2
+              totalOTEarnings+=otEarnings; perBranch[br].otEarnings+=otEarnings;
+              totalOTPremium+=otPremium;    perBranch[br].otPremium+=otPremium;
+            } else if(isHoliday){
+              // Bán hàng ngày lễ: OT về trễ (1x, đã trong base, chỉ theo dõi)
+              otEarnings=diffFromEnd*wageMin; totalOTEarnings+=otEarnings; perBranch[br].otEarnings+=otEarnings;
+            }
+          }
+          // Bán hàng ngày lễ: theo dõi OT đến sớm (1x, đã trong base)
           if(role==='ban_hang'&&isHoliday&&vaoMin<shift.start){
             const earlyArrMins=Math.round(shift.start-vaoMin);
             if(earlyArrMins>0){otEarnings+=earlyArrMins*wageMin;totalOTEarnings+=earlyArrMins*wageMin;perBranch[br].otEarnings+=earlyArrMins*wageMin;}
@@ -608,8 +619,8 @@ function calculate() {
     });
 
     const autoBonus200k=((role==='ban_hang'&&totalShifts>30)||(role==='lam_banh'&&workDays>=30))?200000:0;
-    const grossWage=totalBase+totalBonusExtra+autoBonus200k-totalPenalty3k;
-    emp.stats={workDays,lateDays,earlyDays,otDays,totalShifts,totalBase,totalPenalty3k,totalBonusExtra,totalOTEarnings,totalLateDeduct,totalExpectedSalary,autoBonus200k,grossWage,role,perBranch,wageHour};
+    const grossWage=totalBase+totalBonusExtra+totalOTPremium+autoBonus200k-totalPenalty3k;
+    emp.stats={workDays,lateDays,earlyDays,otDays,totalShifts,totalBase,totalPenalty3k,totalBonusExtra,totalOTEarnings,totalOTPremium,totalLateDeduct,totalExpectedSalary,autoBonus200k,grossWage,role,perBranch,wageHour};
   });
 
   renderOverview(); renderDetail();
