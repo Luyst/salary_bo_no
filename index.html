@@ -605,10 +605,12 @@ function calculate() {
             if(earlyArrMins>0){otEarnings+=earlyArrMins*wageMin;totalOTEarnings+=earlyArrMins*wageMin;perBranch[br].otEarnings+=earlyArrMins*wageMin;}
           }
         }
-        // Lương cơ bản: bán hàng ngày thường cap tại giờ hết ca (không trả OT)
+        // Lương cơ bản: bán hàng ngày thường chỉ tính đúng giờ ca (đến sớm/về trễ đều không cộng)
         {
-          const payRaMin=(shift&&role==='ban_hang'&&!isHoliday)?Math.min(raMin,shift.end):raMin;
-          const payMins=Math.max(0,Math.round(payRaMin-vaoMin));
+          const isBanHangNormal=(shift&&role==='ban_hang'&&!isHoliday);
+          const payVaoMin=isBanHangNormal?Math.max(vaoMin,shift.start):vaoMin;
+          const payRaMin=isBanHangNormal?Math.min(raMin,shift.end):raMin;
+          const payMins=Math.max(0,Math.round(payRaMin-payVaoMin));
           baseWage=(payMins/60)*wageHour;
           totalBase+=baseWage;
         }
