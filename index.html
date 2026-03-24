@@ -750,10 +750,10 @@ function renderDetail() {
     const wm=(wageState[emp.empName]??s.wageHour)/60;
     const otMins=(r.vao||r.ra)?(wm>0?Math.round(r.otEarnings/wm):0):null;
     const otC=(r.vao||r.ra)?(otMins>0?`<span class="c-green">+${otMins}'</span>`:`<span class="c-muted">0</span>`):`<span class="c-muted">—</span>`;
-    // Lương gốc = giờ chuẩn (expectedSalaryWage của ngày), Trừ trễ = lateDeductMoney, Trừ về sớm = khi về sớm (baseđã bị cắt)
+    // Lương gốc = lương theo ca chuẩn (luôn chẵn), chưa trừ/cộng gì
     const earlyDeduct=Math.max(0,Math.round((r.expectedSalaryWage||0)-r.baseWage-(r.lateDeductMoney||0)));
     const dayWage=r.baseWage+r.otEarnings+r.bonusAmt-(r.lateDeductMoney||0)-earlyDeduct-(r.pLate3k||0);
-    const baseC=r.baseWage>0?`<span class="c-bold">${fmtMoney(r.baseWage)}</span>`:`<span class="c-muted">—</span>`;
+    const baseC=r.expectedSalaryWage>0?`<span class="c-bold">${fmtMoney(r.expectedSalaryWage)}</span>`:`<span class="c-muted">—</span>`;
     const lateDeductC=(r.lateDeductMoney||0)>0?`<span class="c-red">-${fmtMoney(r.lateDeductMoney)}</span>`:`<span class="c-muted">0</span>`;
     const earlyDeductC=earlyDeduct>0?`<span class="c-red">-${fmtMoney(earlyDeduct)}</span>`:`<span class="c-muted">0</span>`;
     const pen3kC=(r.pLate3k||0)>0?`<span class="c-red">-${fmtMoney(r.pLate3k)}</span>`:`<span class="c-muted">0</span>`;
@@ -796,7 +796,7 @@ function renderDetail() {
     sumLateM+=r.lateMins||0;
     sumEarlyM+=r.diffFromEnd<0?Math.abs(r.diffFromEnd):0;
     sumOTM+=wm2>0?Math.round(r.otEarnings/wm2):0;
-    sumBase+=r.baseWage||0;
+    sumBase+=(r.expectedSalaryWage||0);
     sumLateD+=r.lateDeductMoney||0;
     const ed=Math.max(0,Math.round((r.expectedSalaryWage||0)-r.baseWage-(r.lateDeductMoney||0)));
     sumEarlyD+=ed;
@@ -890,7 +890,7 @@ function buildStyledEmpSheet(emp) {
     const earlyDeduct=Math.max(0,Math.round((r.expectedSalaryWage||0)-r.baseWage-(r.lateDeductMoney||0)));
     const dayWage=Math.round(r.baseWage+(r.otEarnings||0)+(r.bonusAmt||0)-(r.lateDeductMoney||0)-earlyDeduct-(r.pLate3k||0));
     sumLateM+=r.lateMins||0; sumEarlyM+=earlyMins; sumOTM+=otMins;
-    sumBase+=r.baseWage||0; sumLateD+=r.lateDeductMoney||0; sumEarlyD+=earlyDeduct;
+    sumBase+=(r.expectedSalaryWage||0); sumLateD+=r.lateDeductMoney||0; sumEarlyD+=earlyDeduct;
     sumBonus+=r.bonusAmt||0; sumPen3k+=(r.pLate3k||0); sumDayWage+=dayWage;
     [xlCell(r.dateStr), xlCell(r.thu),
      xlCell(BRANCHES[r.branch]?.label||''),
@@ -901,7 +901,7 @@ function buildStyledEmpSheet(emp) {
      otMins>0?greenCell(otMins):xlCell(0),
      xlCell(r.lateMins>0?(notificationState[nk]?'Có':'Không'):'—'),
      r.bonusAmt>0?greenCell(Math.round(r.bonusAmt),NUM):xlCell(0),
-     boldCell(Math.round(r.baseWage)||0,NUM),
+     boldCell(Math.round(r.expectedSalaryWage)||0,NUM),
      (r.lateDeductMoney||0)>0?redCell(-Math.round(r.lateDeductMoney),NUM):xlCell(0),
      earlyDeduct>0?redCell(-earlyDeduct,NUM):xlCell(0),
      (r.pLate3k||0)>0?redCell(-Math.round(r.pLate3k),NUM):xlCell(0),
