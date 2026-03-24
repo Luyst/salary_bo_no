@@ -224,10 +224,15 @@
           <thead><tr>
             <th>Ngày</th><th>Thứ</th><th>Chi nhánh</th>
             <th>Giờ Vào</th><th>Giờ Ra</th>
-            <th>Ca & Trạng thái</th><th>Trễ (phút)</th>
-            <th style="color:var(--red)">Về sớm</th><th style="color:var(--green)">OT (phút)</th>
+            <th>Ca &amp; Trạng thái</th><th>Trễ (phút)</th>
+            <th style="color:var(--red)">Về sớm (phút)</th><th style="color:var(--green)">OT (phút)</th>
             <th>Báo trước</th><th style="color:var(--green)">Thưởng (₫)</th>
-            <th>Lương ngày</th><th>Điều chỉnh</th><th>Ghi chú</th>
+            <th>Lương gốc (₫)</th>
+            <th style="color:var(--red)">Trừ trễ (₫)</th>
+            <th style="color:var(--red)">Trừ về sớm (₫)</th>
+            <th style="color:var(--red)">Phạt 3k (₫)</th>
+            <th style="color:var(--caramel);font-weight:700">Lương ngày (₫)</th>
+            <th>Ghi chú</th>
           </tr></thead>
           <tbody id="detail-body"></tbody>
         </table>
@@ -659,7 +664,7 @@ function calculate() {
         if(overrideRa&&row.ra==null) ghuchu='📝 Giờ ra nhập tay';
         if(dateBonusAmt>0) ghuchu=(ghuchu?ghuchu+' · ':'')+`🎁 ${dateBonusNote||'Thưởng ngày '+dateStr}${shiftCount>1?' ×'+shiftCount+' ca':''}`;
       }
-      emp.processedRows.push({...row,vao:row.vao,ra:row.ra,raEffective:ra,workedMins,lateMins,diffFromEnd,baseWage,pLate3k,bonusAmt,adjust,otEarnings,lateDeductMoney,shiftCount,statusBadge,statusLabel,shiftName,ghuchu});
+      emp.processedRows.push({...row,vao:row.vao,ra:row.ra,raEffective:ra,workedMins,lateMins,diffFromEnd,baseWage,pLate3k,bonusAmt,adjust,otEarnings,lateDeductMoney,shiftCount,statusBadge,statusLabel,shiftName,ghuchu,expectedSalaryWage});
     });
 
     const autoBonus200k=((role==='ban_hang'&&totalShifts>30)||(role==='lam_banh'&&workDays>=30))?200000:0;
@@ -740,16 +745,20 @@ function renderDetail() {
     if(r.statusBadge==='vang'&&!r.vao&&!r.ra) return;
     const nk=emp.empName+'|'+r.dateStr;
     const lateC=r.lateMins>0?`<span class="c-red">-${r.lateMins}'</span>`:`<span class="c-muted">0</span>`;
-    // Về sớm: diffFromEnd < 0 và không phải OT (otEarnings từ về sớm = 0 cho ngày thường)
     const earlySecs=(!r.vao&&!r.ra)?null:(r.diffFromEnd<0?Math.abs(r.diffFromEnd):0);
     const earlyC=(r.vao||r.ra)?(earlySecs>0?`<span class="c-red">-${earlySecs}'</span>`:`<span class="c-muted">0</span>`):`<span class="c-muted">—</span>`;
-    // OT: đến sớm (earlyArrMins) + về muộn — dùng otEarnings / wageMin để tính số phút
     const wm=(wageState[emp.empName]??s.wageHour)/60;
     const otMins=(r.vao||r.ra)?(wm>0?Math.round(r.otEarnings/wm):0):null;
     const otC=(r.vao||r.ra)?(otMins>0?`<span class="c-green">+${otMins}'</span>`:`<span class="c-muted">0</span>`):`<span class="c-muted">—</span>`;
+    // Lương gốc = giờ chuẩn (expectedSalaryWage của ngày), Trừ trễ = lateDeductMoney, Trừ về sớm = khi về sớm (baseđã bị cắt)
+    const earlyDeduct=Math.max(0,Math.round((r.expectedSalaryWage||0)-r.baseWage-(r.lateDeductMoney||0)));
+    const dayWage=r.baseWage+r.otEarnings+r.bonusAmt-(r.lateDeductMoney||0)-earlyDeduct-(r.pLate3k||0);
     const baseC=r.baseWage>0?`<span class="c-bold">${fmtMoney(r.baseWage)}</span>`:`<span class="c-muted">—</span>`;
-    const adjC=r.adjust>0?`<span class="c-green">+${fmtMoney(r.adjust)}</span>`:r.adjust<0?`<span class="c-red">${fmtMoney(r.adjust)}</span>`:(r.baseWage>0?`<span class="c-muted">0</span>`:`<span class="c-muted">—</span>`);
-    const chk=r.lateMins>0?`<input type="checkbox" onchange="toggleNoti('${escJs(emp.empName)}','${r.dateStr}')" ${notificationState[nk]?'checked':''}>`:`<span class="c-muted">—</span>`;
+    const lateDeductC=(r.lateDeductMoney||0)>0?`<span class="c-red">-${fmtMoney(r.lateDeductMoney)}</span>`:`<span class="c-muted">0</span>`;
+    const earlyDeductC=earlyDeduct>0?`<span class="c-red">-${fmtMoney(earlyDeduct)}</span>`:`<span class="c-muted">0</span>`;
+    const pen3kC=(r.pLate3k||0)>0?`<span class="c-red">-${fmtMoney(r.pLate3k)}</span>`:`<span class="c-muted">0</span>`;
+    const dayWageC=dayWage>0?`<span class="c-bold c-caramel">${fmtMoney(dayWage)}</span>`:`<span class="c-muted">—</span>`;
+    const chk=r.lateMins>0?`<input type="checkbox" onchange="toggleNoti('${escJs(emp.empName)}','${r.dateStr}')" ${notificationState[nk]?'checked':''}>`:` <span class="c-muted">—</span>`;
     const bval=bonusState[nk]||'';
     const bInp=(r.vao||r.ra)?`<input type="number" class="bonus-inp" value="${bval}" placeholder="0" onchange="updateBonus('${escJs(emp.empName)}','${r.dateStr}',this.value)">`:`<span class="c-muted">—</span>`;
     const brLbl=BRANCHES[r.branch]?.label||'—';
@@ -772,51 +781,221 @@ function renderDetail() {
       <td style="font-family:monospace">${raCell}</td>
       <td><span class="badge ${bmap[r.statusBadge]||'b-ok'}">${r.statusLabel}</span></td>
       <td>${lateC}</td><td>${earlyC}</td><td>${otC}</td><td>${chk}</td>
-      <td>${bInp}</td><td>${baseC}</td><td>${adjC}</td>
+      <td>${bInp}</td>
+      <td>${baseC}</td><td>${lateDeductC}</td><td>${earlyDeductC}</td><td>${pen3kC}</td>
+      <td>${dayWageC}</td>
       <td style="font-size:11px;color:var(--caramel)">${r.ghuchu||''}</td>`;
     tbody.appendChild(tr);
   });
+
+  // ── Hàng tổng cộng ─────────────────────────────────────────
+  const wm2=(wageState[emp.empName]??s.wageHour)/60;
+  let sumLateM=0,sumEarlyM=0,sumOTM=0,sumBase=0,sumLateD=0,sumEarlyD=0,sumBonus=0,sumPen3k=0,sumDayWage=0;
+  emp.processedRows.forEach(r=>{
+    if(r.statusBadge==='vang'&&!r.vao&&!r.ra) return;
+    sumLateM+=r.lateMins||0;
+    sumEarlyM+=r.diffFromEnd<0?Math.abs(r.diffFromEnd):0;
+    sumOTM+=wm2>0?Math.round(r.otEarnings/wm2):0;
+    sumBase+=r.baseWage||0;
+    sumLateD+=r.lateDeductMoney||0;
+    const ed=Math.max(0,Math.round((r.expectedSalaryWage||0)-r.baseWage-(r.lateDeductMoney||0)));
+    sumEarlyD+=ed;
+    sumBonus+=r.bonusAmt||0;
+    sumPen3k+=(r.pLate3k||0);
+    sumDayWage+=r.baseWage+(r.otEarnings||0)+(r.bonusAmt||0)-(r.lateDeductMoney||0)-ed-(r.pLate3k||0);
+  });
+  const totRow=document.createElement('tr');
+  totRow.style.cssText='font-weight:700;background:rgba(217,119,6,0.07);border-top:2px solid var(--caramel)';
+  totRow.innerHTML=`
+    <td colspan="6" style="color:var(--caramel);letter-spacing:1px;font-size:11px">Σ TỔNG CỘNG</td>
+    <td><span class="c-red">-${sumLateM}'</span></td>
+    <td><span class="c-red">-${sumEarlyM}'</span></td>
+    <td><span class="c-green">+${sumOTM}'</span></td>
+    <td></td><td><span class="c-green">${fmtMoney(sumBonus)}</span></td>
+    <td><span class="c-bold">${fmtMoney(sumBase)}</span></td>
+    <td><span class="c-red">${sumLateD>0?'-'+fmtMoney(sumLateD):'0'}</span></td>
+    <td><span class="c-red">${sumEarlyD>0?'-'+fmtMoney(sumEarlyD):'0'}</span></td>
+    <td><span class="c-red">${sumPen3k>0?'-'+fmtMoney(sumPen3k):'0'}</span></td>
+    <td><span class="c-bold c-caramel">${fmtMoney(sumDayWage)}</span></td>
+    <td></td>`;
+  tbody.appendChild(totRow);
 }
 
 function toggleNoti(n,d){const k=n+'|'+d;notificationState[k]=!notificationState[k];calculate();}
 function updateBonus(n,d,v){bonusState[n+'|'+d]=parseFloat(v)||0;calculate();}
 
 // ═══ EXPORT ═══════════════════════════════════════════
-function buildSheetData(emp) {
-  const s=emp.stats; const allBr=Object.keys(BRANCHES); const pb=s.perBranch||{};
-  const rows=[
-    ['Tên nhân viên',emp.empName,'','Loại NV',s.role==='lam_banh'?'Làm bánh/Bếp':'Bán hàng','','Lương/giờ',fmtMoney(s.wageHour)],
-    ['Nơi làm',emp.branchLabel],[],
-    ['',...allBr.map(b=>BRANCHES[b].label),'Tổng'],
-    ['Tổng số ca',...allBr.map(b=>pb[b]?.shifts||0),s.totalShifts],
-    ['Ngày làm',...allBr.map(b=>pb[b]?.workDays||0),s.workDays],
-    ['Làm thêm giờ (₫)',...allBr.map(b=>Math.round(pb[b]?.otEarnings||0)),Math.round(s.totalOTEarnings)],
-    ['Trừ đi trễ (₫)',...allBr.map(b=>-(Math.round(pb[b]?.lateDeduct||0))),-(Math.round(s.totalLateDeduct))],
-    ['Thưởng thêm (₫)',...allBr.map(b=>Math.round(pb[b]?.bonusExtra||0)),Math.round(s.totalBonusExtra)],
-    ['Phạt 3k (₫)',...allBr.map(b=>-(Math.round(pb[b]?.penalty3k||0))),-(Math.round(s.totalPenalty3k))],
-    [],['Lương tổng','','','',Math.round(s.totalExpectedSalary)],
-    ['Thưởng 200k','','','',s.autoBonus200k],
-    ['Thực nhận','','','',Math.round(s.grossWage)],[],
-    ['Ngày','Thứ','Chi nhánh','Giờ Vào','Giờ Ra','Ca','Trạng Thái','Trễ (phút)','Về sớm (phút)','OT (phút)','Báo Trước','Thưởng (₫)','Lương Ngày','Ghi Chú'],
+// ── Màu & style cho Excel ──────────────────────────────
+const XL_CLR={headerBg:'FF2C3E50',headerFg:'FFFFFFFF',subHdrBg:'FFD97706',subHdrFg:'FF000000',totBg:'FFFFF3E0',totFg:'FFB45309',redFg:'FFDC2626',greenFg:'FF059669',caramelFg:'FFB45309',mutedFg:'FF9CA3AF',borderClr:'FFD1D5DB'};
+function xlCell(v,opts={}){
+  const c={v:v??'',t:typeof v==='number'?'n':'s'};
+  if(opts.bold||opts.color||opts.bg||opts.align||opts.fmt||opts.sz){
+    const font={bold:!!opts.bold,color:opts.color?{rgb:opts.color.replace('#','')}:undefined,sz:opts.sz||11,name:'Arial'};
+    const fill=opts.bg?{fgColor:{rgb:opts.bg.replace('#','')},patternType:'solid'}:{patternType:'none'};
+    const border={top:{style:'thin',color:{rgb:XL_CLR.borderClr}},bottom:{style:'thin',color:{rgb:XL_CLR.borderClr}},left:{style:'thin',color:{rgb:XL_CLR.borderClr}},right:{style:'thin',color:{rgb:XL_CLR.borderClr}}};
+    const alignment={horizontal:opts.align||'left',vertical:'center',wrapText:false};
+    c.s={font,fill,border,alignment};
+    if(opts.fmt) c.z=opts.fmt;
+  }
+  return c;
+}
+function hdr(v){return xlCell(v,{bold:true,bg:'#2C3E50',color:'#FFFFFF',sz:11});}
+function subHdr(v){return xlCell(v,{bold:true,bg:'#D97706',color:'#000000',sz:11});}
+function totCell(v,fmt){const c=xlCell(v,{bold:true,bg:'#FFF3E0',color:'#B45309'});if(fmt&&typeof v==='number')c.z=fmt;return c;}
+function redCell(v,fmt){const c=xlCell(v,{color:'#DC2626'});if(fmt&&typeof v==='number')c.z=fmt;return c;}
+function greenCell(v,fmt){const c=xlCell(v,{color:'#059669'});if(fmt&&typeof v==='number')c.z=fmt;return c;}
+function boldCell(v,fmt){const c=xlCell(v,{bold:true});if(fmt&&typeof v==='number')c.z=fmt;return c;}
+const NUM='#,##0';
+
+function setCell(ws,R,C,cell){
+  const addr=XLSX.utils.encode_cell({r:R,c:C});
+  ws[addr]=cell;
+  const ref=ws['!ref']?XLSX.utils.decode_range(ws['!ref']):{s:{r:999,c:999},e:{r:0,c:0}};
+  if(R<ref.s.r)ref.s.r=R; if(C<ref.s.c)ref.s.c=C;
+  if(R>ref.e.r)ref.e.r=R; if(C>ref.e.c)ref.e.c=C;
+  ws['!ref']=XLSX.utils.encode_range(ref);
+}
+
+function buildStyledEmpSheet(emp) {
+  const s=emp.stats; const wm=(s.wageHour||22000)/60;
+  const ws={}; let R=0;
+  const COLS=['Ngày','Thứ','Chi nhánh','Giờ Vào','Giờ Ra','Ca / Trạng thái',
+              'Trễ (phút)','Về sớm (phút)','OT (phút)','Báo trước',
+              'Thưởng (₫)','Lương gốc (₫)','Trừ trễ (₫)','Trừ về sớm (₫)','Phạt 3k (₫)',
+              'Lương ngày (₫)','Ghi chú'];
+
+  // ─ Thông tin NV ──────────────────────────────────────────────────────
+  const infoRows=[
+    [subHdr('Tên nhân viên'),xlCell(emp.empName,{bold:true,sz:12}),'','',
+     subHdr('Loại NV'),xlCell(s.role==='lam_banh'?'Làm bánh/Bếp':'Bán hàng',{bold:true}),'','',
+     subHdr('Lương/giờ'),xlCell(s.wageHour,{bold:true,fmt:NUM})],
+    [subHdr('Nơi làm'),xlCell(emp.branchLabel,{bold:true})],
+    [],
+    [subHdr('Thưởng 200k'),xlCell(s.autoBonus200k||0,{bold:true}),
+     '','',subHdr('Thực nhận'),totCell(Math.round(s.grossWage),NUM)],
+    [],
   ];
+  infoRows.forEach(row=>{ row.forEach((c,ci)=>setCell(ws,R,ci,typeof c==='string'?xlCell(c):c)); R++; });
+
+  // ─ Header bảng chi tiết ──────────────────────────────────────────────
+  COLS.forEach((c,ci)=>setCell(ws,R,ci,hdr(c))); R++;
+
+  // ─ Data rows ─────────────────────────────────────────────────────────
+    let sumLateM=0,sumEarlyM=0,sumOTM=0,sumBase=0,sumLateD=0,sumEarlyD=0,sumBonus=0,sumPen3k=0,sumDayWage=0;
   emp.processedRows.forEach(r=>{
     if(r.statusBadge==='vang'&&!r.vao&&!r.ra) return;
     const nk=emp.empName+'|'+r.dateStr;
-    const wm2=(s.wageHour||22000)/60;
-    const earlyMins2=r.diffFromEnd<0?Math.abs(r.diffFromEnd):0;
-    const otMins2=wm2>0?Math.round(r.otEarnings/wm2):0;
-    rows.push([r.dateStr,r.thu,BRANCHES[r.branch]?.label||'',fmtTime(r.vao),fmtTime(r.raEffective||r.ra),r.shiftName||'',r.statusLabel,r.lateMins||0,earlyMins2,otMins2,r.lateMins>0?(notificationState[nk]?'Có':'Không'):'—',r.bonusAmt||0,Math.round(r.baseWage||0),r.ghuchu||'']);
+    const earlyMins=r.diffFromEnd<0?Math.abs(r.diffFromEnd):0;
+    const otMins=wm>0?Math.round(r.otEarnings/wm):0;
+    const earlyDeduct=Math.max(0,Math.round((r.expectedSalaryWage||0)-r.baseWage-(r.lateDeductMoney||0)));
+    const dayWage=Math.round(r.baseWage+(r.otEarnings||0)+(r.bonusAmt||0)-(r.lateDeductMoney||0)-earlyDeduct-(r.pLate3k||0));
+    sumLateM+=r.lateMins||0; sumEarlyM+=earlyMins; sumOTM+=otMins;
+    sumBase+=r.baseWage||0; sumLateD+=r.lateDeductMoney||0; sumEarlyD+=earlyDeduct;
+    sumBonus+=r.bonusAmt||0; sumPen3k+=(r.pLate3k||0); sumDayWage+=dayWage;
+    [xlCell(r.dateStr), xlCell(r.thu),
+     xlCell(BRANCHES[r.branch]?.label||''),
+     xlCell(fmtTime(r.vao)), xlCell(fmtTime(r.raEffective||r.ra)),
+     xlCell(r.statusLabel),
+     r.lateMins>0?redCell(-(r.lateMins)):xlCell(0),
+     earlyMins>0?redCell(-earlyMins):xlCell(0),
+     otMins>0?greenCell(otMins):xlCell(0),
+     xlCell(r.lateMins>0?(notificationState[nk]?'Có':'Không'):'—'),
+     r.bonusAmt>0?greenCell(Math.round(r.bonusAmt),NUM):xlCell(0),
+     boldCell(Math.round(r.baseWage)||0,NUM),
+     (r.lateDeductMoney||0)>0?redCell(-Math.round(r.lateDeductMoney),NUM):xlCell(0),
+     earlyDeduct>0?redCell(-earlyDeduct,NUM):xlCell(0),
+     (r.pLate3k||0)>0?redCell(-Math.round(r.pLate3k),NUM):xlCell(0),
+     totCell(dayWage,NUM),
+     xlCell(r.ghuchu||''),
+    ].forEach((c,ci)=>setCell(ws,R,ci,c)); R++;
   });
-  return rows;
+
+  // ─ Hàng tổng ─────────────────────────────────────────────────────────
+  [totCell('TỔNG CỘNG'),totCell(''),totCell(''),totCell(''),totCell(''),totCell(''),
+   totCell(sumLateM?-sumLateM:0), totCell(sumEarlyM?-sumEarlyM:0), totCell(sumOTM||0),
+   totCell(''), totCell(Math.round(sumBonus),NUM),
+   totCell(Math.round(sumBase),NUM),
+   totCell(sumLateD?-Math.round(sumLateD):0,NUM),
+   totCell(sumEarlyD?-Math.round(sumEarlyD):0,NUM),
+   totCell(sumPen3k?-Math.round(sumPen3k):0,NUM),
+   totCell(Math.round(sumDayWage),NUM), totCell(''),
+  ].forEach((c,ci)=>setCell(ws,R,ci,c));
+
+  ws['!cols']=[80,40,80,65,75,155,60,70,60,60,100,110,100,110,90,110,180].map(w=>({wpx:w}));
+  return ws;
 }
 
-function sanitize(n){return n.replace(/[:\\\/\?\*\[\]]/g,'').slice(0,31);}
+function buildStyledSummarySheet() {
+  const ws={}; let R=0;
+  const COLS=['Tên nhân viên','Loại NV','Nơi làm','Lương/giờ (₫)',
+              'Ngày làm','Tổng ca','Ngày trễ','Ngày về sớm','Ngày OT',
+              'Tổng trễ (phút)','Tổng về sớm (phút)','Tổng OT (phút)',
+              'Lương gốc (₫)','Trừ trễ (₫)','Trừ về sớm (₫)',
+              'Thưởng (₫)','Thưởng 200k (₫)','Phạt 3k (₫)','Thực nhận (₫)','Ghi chú'];
+  COLS.forEach((c,ci)=>setCell(ws,R,ci,hdr(c))); R++;
+
+  let sN=0,sD=0,sShift=0,sLateD=0,sEarlyD=0,sOTD=0;
+  let sLateM=0,sEarlyM=0,sOTM=0,sBase=0,sDedLate=0,sDedEarly=0,sBonus=0,s200=0,sPen=0,sGross=0;
+
+  allEmployeesData.forEach(emp=>{
+    const s=emp.stats; const wm=(s.wageHour||22000)/60;
+    let lateM=0,earlyM=0,otM=0,dedLate=0,dedEarly=0;
+    emp.processedRows.forEach(r=>{
+      if(r.statusBadge==='vang'&&!r.vao&&!r.ra) return;
+      lateM+=r.lateMins||0;
+      earlyM+=r.diffFromEnd<0?Math.abs(r.diffFromEnd):0;
+      otM+=wm>0?Math.round(r.otEarnings/wm):0;
+      dedLate+=r.lateDeductMoney||0;
+      dedEarly+=Math.max(0,Math.round((r.expectedSalaryWage||0)-r.baseWage-(r.lateDeductMoney||0)));
+    });
+    const note=s.autoBonus200k>0?'🎉 Thưởng đầy ca':(s.totalShifts>25?'🟡 Gần đủ ca':s.workDays>25?'🟡 Gần đủ ngày':'');
+    [boldCell(emp.empName),
+     xlCell(s.role==='lam_banh'?'Làm bánh/Bếp':'Bán hàng'),
+     xlCell(emp.branchLabel), xlCell(s.wageHour,NUM),
+     xlCell(s.workDays), xlCell(s.totalShifts),
+     s.lateDays>0?redCell(s.lateDays):xlCell(0),
+     s.earlyDays>0?redCell(s.earlyDays):xlCell(0),
+     s.otDays>0?greenCell(s.otDays):xlCell(0),
+     lateM>0?redCell(-lateM):xlCell(0),
+     earlyM>0?redCell(-earlyM):xlCell(0),
+     otM>0?greenCell(otM):xlCell(0),
+     boldCell(Math.round(s.totalExpectedSalary),NUM),
+     dedLate>0?redCell(-Math.round(dedLate),NUM):xlCell(0),
+     dedEarly>0?redCell(-Math.round(dedEarly),NUM):xlCell(0),
+     s.totalBonusExtra>0?greenCell(Math.round(s.totalBonusExtra),NUM):xlCell(0),
+     s.autoBonus200k>0?greenCell(s.autoBonus200k,NUM):xlCell(0),
+     s.totalPenalty3k>0?redCell(-Math.round(s.totalPenalty3k),NUM):xlCell(0),
+     totCell(Math.round(s.grossWage),NUM),
+     xlCell(note),
+    ].forEach((c,ci)=>setCell(ws,R,ci,c)); R++;
+    sN++; sD+=s.workDays; sShift+=s.totalShifts;
+    sLateD+=s.lateDays; sEarlyD+=s.earlyDays; sOTD+=s.otDays;
+    sLateM+=lateM; sEarlyM+=earlyM; sOTM+=otM;
+    sBase+=s.totalExpectedSalary; sDedLate+=dedLate; sDedEarly+=dedEarly;
+    sBonus+=s.totalBonusExtra; s200+=s.autoBonus200k; sPen+=s.totalPenalty3k; sGross+=s.grossWage;
+  });
+
+  // Dòng tổng
+  [totCell(`TỔNG (${sN} NV)`),totCell(''),totCell(''),totCell(''),
+   totCell(sD),totCell(sShift),
+   totCell(sLateD),totCell(sEarlyD),totCell(sOTD),
+   totCell(-sLateM),totCell(-sEarlyM),totCell(sOTM),
+   totCell(Math.round(sBase),NUM), totCell(-Math.round(sDedLate),NUM), totCell(-Math.round(sDedEarly),NUM),
+   totCell(Math.round(sBonus),NUM), totCell(s200,NUM), totCell(-Math.round(sPen),NUM),
+   totCell(Math.round(sGross),NUM), totCell(''),
+  ].forEach((c,ci)=>setCell(ws,R,ci,c));
+
+  ws['!cols']=[130,90,110,80,60,60,65,70,55,80,90,70,110,100,110,100,90,80,110,120].map(w=>({wpx:w}));
+  return ws;
+}
+
+function sanitize(n){return n.replace(/[:\\\\/\?\*\[\]]/g,'').slice(0,31);}
 
 function exportCurrentEmployee() {
   if(!allEmployeesData.length) return;
   const emp=allEmployeesData[currentEmpIndex];
   const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(buildSheetData(emp)),sanitize(emp.empName));
+  XLSX.utils.book_append_sheet(wb,buildStyledEmpSheet(emp),sanitize(emp.empName));
   XLSX.writeFile(wb,`BangLuong_${emp.empName.replace(/\s+/g,'_')}.xlsx`);
 }
 
@@ -824,23 +1003,18 @@ async function exportAllInOne() {
   if(!allEmployeesData.length) return;
   const d=new Date(); const tag=`${d.getDate().toString().padStart(2,'0')}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getFullYear()}`;
 
-  // ── 1. File tổng hợp (nhiều sheet) ──────────────────────────────────────
+  // ── 1. File tổng hợp ─────────────────────────────────────────────────
   const wbAll=XLSX.utils.book_new();
-  const sum=[['Tên nhân viên','Loại NV','Nơi làm','Lương/giờ','Ngày làm','Tổng ca','Vi phạm','Lương gốc (₫)','Phạt 3k (₫)','Thưởng (₫)','Thưởng 200k','Thực nhận (₫)','Ghi chú']];
-  allEmployeesData.forEach(e=>{
-    const s=e.stats; const note=s.autoBonus200k>0?'Thưởng đầy ca/ngày':(s.totalShifts>25?'Gần đủ ca':s.workDays>25?'Gần đủ ngày':'');
-    sum.push([e.empName,s.role==='lam_banh'?'Làm bánh/Bếp':'Bán hàng',e.branchLabel,fmtMoney(s.wageHour),s.workDays,s.totalShifts,s.lateDays+s.earlyDays,Math.round(s.totalBase),Math.round(s.totalPenalty3k),Math.round(s.totalBonusExtra),s.autoBonus200k,Math.round(s.grossWage),note]);
-  });
-  XLSX.utils.book_append_sheet(wbAll,XLSX.utils.aoa_to_sheet(sum),'Tổng Hợp');
+  XLSX.utils.book_append_sheet(wbAll,buildStyledSummarySheet(),'Tổng Hợp');
   const used={};
   allEmployeesData.forEach(emp=>{
     let sn=sanitize(emp.empName);
     if(used[sn]){used[sn]++;sn=sn.slice(0,28)+'_'+used[sn];}else used[sn]=1;
-    XLSX.utils.book_append_sheet(wbAll,XLSX.utils.aoa_to_sheet(buildSheetData(emp)),sn);
+    XLSX.utils.book_append_sheet(wbAll,buildStyledEmpSheet(emp),sn);
   });
-  const allBuf=XLSX.write(wbAll,{bookType:'xlsx',type:'array'});
+  const allBuf=XLSX.write(wbAll,{bookType:'xlsx',type:'array',cellStyles:true});
 
-  // ── 2. Đóng gói ZIP ──────────────────────────────────────────────────────
+  // ── 2. ZIP ────────────────────────────────────────────────────────────
   const zip=new JSZip();
   zip.file(`BangLuong_TatCa_${tag}.xlsx`, allBuf);
   const used2={};
@@ -848,8 +1022,8 @@ async function exportAllInOne() {
     const wbEmp=XLSX.utils.book_new();
     let sn=sanitize(emp.empName);
     if(used2[sn]){used2[sn]++;sn=sn.slice(0,28)+'_'+used2[sn];}else used2[sn]=1;
-    XLSX.utils.book_append_sheet(wbEmp,XLSX.utils.aoa_to_sheet(buildSheetData(emp)),sn);
-    const empBuf=XLSX.write(wbEmp,{bookType:'xlsx',type:'array'});
+    XLSX.utils.book_append_sheet(wbEmp,buildStyledEmpSheet(emp),sn);
+    const empBuf=XLSX.write(wbEmp,{bookType:'xlsx',type:'array',cellStyles:true});
     zip.file(`BangLuong_${emp.empName.replace(/\s+/g,'_')}.xlsx`, empBuf);
   });
 
