@@ -574,7 +574,8 @@ function calculate() {
         const shift=detectShift(vaoMin,raMin,br);
         if(shift){
           shiftName=shift.name; shiftCount=countShifts(shiftName);
-          expectedSalaryWage=(shift.end-shift.start)/60*wageHour;
+          // Ca 2+3 (13h-22h) = 9h nhưng tính 2 ca × 5h = 10h
+          expectedSalaryWage=shiftName.includes('2+3')?shiftCount*5*wageHour:(shift.end-shift.start)/60*wageHour;
           totalExpectedSalary+=expectedSalaryWage; perBranch[br].expectedSalary+=expectedSalaryWage;
 
           const allowed=shift.start+shift.grace;
@@ -616,7 +617,9 @@ function calculate() {
           const effectiveVaoMin=shift&&vaoMin<=shift.start+shift.grace ? shift.start : vaoMin;
           const payVaoMin=isBanHangNormal ? Math.max(effectiveVaoMin,shift.start) : effectiveVaoMin;
           const payRaMin=isBanHangNormal ? Math.min(raMin,shift.end) : raMin;
-          const payMins=Math.max(0,Math.round(payRaMin-payVaoMin));
+          const payMinsRaw=Math.max(0,Math.round(payRaMin-payVaoMin));
+          // Ca 2+3: cộng 60 phút (bù phần overlap 17h-18h giữa 2 ca)
+          const payMins=shiftName.includes('2+3')?payMinsRaw+60:payMinsRaw;
           baseWage=(payMins/60)*wageHour;
           totalBase+=baseWage;
         }
