@@ -585,10 +585,9 @@ function calculate() {
               pLate3k=notificationState[notiKey]?0:lateMins*3000; totalPenalty3k+=pLate3k; perBranch[br].penalty3k+=pLate3k; } }
 
           diffFromEnd=Math.round(raMin-shift.end);
-          if(diffFromEnd<0){earlyDays++;if(!statusBadge){statusBadge='early';statusLabel='Về sớm';}else statusLabel+=' + Về sớm';}
-          else if(diffFromEnd>0){
-            if(role==='lam_banh'){
-              // Bếp: luôn tính OT badge + phân tầng
+          if(role==='lam_banh'){
+            // Bếp: luôn tính OT badge + phân tầng (chỉ khi về muộn)
+            if(diffFromEnd>0){
               otDays++;if(!statusBadge){statusBadge='ot';statusLabel='OT';}else statusLabel+=' + OT';
               const tier1Mins=Math.min(diffFromEnd,60);
               const tier2Mins=Math.max(0,diffFromEnd-60);
@@ -596,17 +595,34 @@ function calculate() {
               const otPremium=tier2Mins*wageMin;
               totalOTEarnings+=otEarnings; perBranch[br].otEarnings+=otEarnings;
               totalOTPremium+=otPremium;    perBranch[br].otPremium+=otPremium;
-            } else if(isHoliday){
-              // Bán hàng ngày lễ: OT badge + theo dõi
-              otDays++;if(!statusBadge){statusBadge='ot';statusLabel='OT';}else statusLabel+=' + OT';
-              otEarnings=diffFromEnd*wageMin; totalOTEarnings+=otEarnings; perBranch[br].otEarnings+=otEarnings;
+            } else if(diffFromEnd<0){
+              earlyDays++;if(!statusBadge){statusBadge='early';statusLabel='Về sớm';}else statusLabel+=' + Về sớm';
             }
-            // Bán hàng ngày thường: diffFromEnd > 0 nhưng không note, không tính tiền
-          }
-          // Bán hàng ngày lễ: theo dõi OT đến sớm (1x, đã trong base)
-          if(role==='ban_hang'&&isHoliday&&vaoMin<shift.start){
-            const earlyArrMins=Math.round(shift.start-vaoMin);
-            if(earlyArrMins>0){otEarnings+=earlyArrMins*wageMin;totalOTEarnings+=earlyArrMins*wageMin;perBranch[br].otEarnings+=earlyArrMins*wageMin;}
+          } else if(isHoliday){
+            // Bán hàng ngày lễ: cả đến sớm, về sớm, về muộn đều tính là OT (badge + tiền)
+            // 1) Về muộn: raMin > shift.end
+            if(diffFromEnd>0){
+              otDays++;if(!statusBadge){statusBadge='ot';statusLabel='OT (về muộn)';}else statusLabel+=' + OT (về muộn)';
+              const lateOTMins=diffFromEnd;
+              otEarnings+=lateOTMins*wageMin; totalOTEarnings+=lateOTMins*wageMin; perBranch[br].otEarnings+=lateOTMins*wageMin;
+            }
+            // 2) Đến sớm: vaoMin < shift.start — giờ làm thêm trước ca
+            if(vaoMin<shift.start){
+              const earlyArrMins=Math.round(shift.start-vaoMin);
+              if(earlyArrMins>0){
+                otDays++;if(!statusBadge){statusBadge='ot';statusLabel='OT (đến sớm)';}else{if(!statusLabel.includes('OT'))statusLabel+=' + OT (đến sớm)';}
+                otEarnings+=earlyArrMins*wageMin; totalOTEarnings+=earlyArrMins*wageMin; perBranch[br].otEarnings+=earlyArrMins*wageMin;
+              }
+            }
+            // 3) Về sớm: raMin < shift.end — vẫn tính OT cho giờ thực làm (không phạt), badge OT thay vì Về sớm
+            if(diffFromEnd<0){
+              // Không phạt earlyDays cho ngày lễ; lương base đã tính giờ thực qua isBanHangNormal=false
+              otDays++;if(!statusBadge){statusBadge='ot';statusLabel='OT (đến sớm về)';}else{if(!statusLabel.includes('OT'))statusLabel+=' + OT';}
+            }
+          } else {
+            // Bán hàng ngày thường
+            if(diffFromEnd<0){earlyDays++;if(!statusBadge){statusBadge='early';statusLabel='Về sớm';}else statusLabel+=' + Về sớm';}
+            // diffFromEnd > 0 ngày thường: không note, không tính tiền
           }
         }
         // Lương cơ bản: đến trong grace period → tính từ shift.start (không mất giờ)
