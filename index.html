@@ -588,7 +588,10 @@ function calculate() {
           const allowed=shift.start+shift.grace;
           if(vaoMin>allowed){ const raw=Math.round(vaoMin-allowed); lateMins=raw<=60?raw:0;
             if(lateMins>0){ lateDays++; statusBadge='late'; statusLabel='Trễ';
-              lateDeductMoney=lateMins*wageMin; totalLateDeduct+=lateDeductMoney; perBranch[br].lateDeduct+=lateDeductMoney;
+              // Trừ lương = toàn bộ phút từ đầu ca (VD 8:11 → 11 phút), không phải chỉ sau grace
+              const lateFromStart=Math.round(vaoMin-shift.start);
+              lateDeductMoney=lateFromStart*wageMin; totalLateDeduct+=lateDeductMoney; perBranch[br].lateDeduct+=lateDeductMoney;
+              // Phạt 3k = chỉ phút sau grace (VD 8:11 → 8 phút × 3k)
               pLate3k=notificationState[notiKey]?0:lateMins*3000; totalPenalty3k+=pLate3k; perBranch[br].penalty3k+=pLate3k; } }
 
           diffFromEnd=Math.round(raMin-shift.end);
