@@ -183,7 +183,7 @@
           <thead><tr>
             <th>#</th><th>Nhân viên</th><th>Loại NV</th><th>Nơi làm</th>
             <th>Lương/giờ</th><th>Ngày làm</th><th>Tổng ca</th>
-            <th>Vi phạm</th><th>Lương gốc</th><th>Phạt 3k</th>
+            <th>Vi phạm</th><th>Lương gốc</th><th style="color:var(--red)">Trừ trễ/sớm</th><th>Phạt 3k</th>
             <th style="color:var(--green)">Thưởng</th><th>Thực nhận</th><th>Ghi chú</th>
           </tr></thead>
           <tbody id="overview-body"></tbody>
@@ -654,7 +654,8 @@ function renderOverview() {
       <td>${s.workDays}</td>
       <td><strong>${s.totalShifts}</strong></td>
       <td class="${s.lateDays+s.earlyDays>0?'c-red':''}">${s.lateDays+s.earlyDays}</td>
-      <td>${fmtMoney(s.totalBase)}</td>
+      <td>${fmtMoney(s.totalExpectedSalary)}</td>
+      <td class="${(s.totalExpectedSalary-s.totalBase)>0?'c-red':'c-muted'}">${(s.totalExpectedSalary-s.totalBase)>0?'-'+fmtMoney(s.totalExpectedSalary-s.totalBase):'—'}</td>
       <td class="${s.totalPenalty3k>0?'c-red':''}">${s.totalPenalty3k>0?'-'+fmtMoney(s.totalPenalty3k):'—'}</td>
       <td class="${bonusTotal>0?'c-green':''}">${bonusTotal>0?'+'+fmtMoney(bonusTotal):'—'}</td>
       <td class="c-bold c-caramel">${fmtMoney(s.grossWage)}</td>
@@ -687,7 +688,8 @@ function renderDetail() {
       <div class="final-name">${emp.empName}</div>
       <div class="final-sub">
         <span>Nơi làm: <strong>${emp.branchLabel}</strong></span>
-        <span>Lương gốc: <strong>${fmtMoney(s.totalBase)}</strong></span>
+        <span>Lương gốc: <strong>${fmtMoney(s.totalExpectedSalary)}</strong></span>
+        ${(s.totalExpectedSalary-s.totalBase)>0?`<span>Trừ trễ/sớm: <strong class="c-red">-${fmtMoney(s.totalExpectedSalary-s.totalBase)}</strong></span>`:''}
         <span>Phạt 3k: <strong class="c-red">${s.totalPenalty3k>0?'-'+fmtMoney(s.totalPenalty3k):'0'}</strong></span>
         <span>Thưởng: <strong class="c-green">+${fmtMoney(bonusTotal)}</strong></span>
         ${s.autoBonus200k>0?'<span class="c-green">🎉 Thưởng đầy ca!</span>':''}
