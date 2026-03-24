@@ -5,6 +5,7 @@
   <title>Tính Lương – Tiệm Bánh</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700;900&display=swap');
     :root{
@@ -223,7 +224,8 @@
           <thead><tr>
             <th>Ngày</th><th>Thứ</th><th>Chi nhánh</th>
             <th>Giờ Vào</th><th>Giờ Ra</th>
-            <th>Ca & Trạng thái</th><th>Trễ (phút)</th><th>Về sớm/OT</th>
+            <th>Ca & Trạng thái</th><th>Trễ (phút)</th>
+            <th style="color:var(--red)">Về sớm</th><th style="color:var(--green)">OT (phút)</th>
             <th>Báo trước</th><th style="color:var(--green)">Thưởng (₫)</th>
             <th>Lương ngày</th><th>Điều chỉnh</th><th>Ghi chú</th>
           </tr></thead>
@@ -738,7 +740,13 @@ function renderDetail() {
     if(r.statusBadge==='vang'&&!r.vao&&!r.ra) return;
     const nk=emp.empName+'|'+r.dateStr;
     const lateC=r.lateMins>0?`<span class="c-red">-${r.lateMins}'</span>`:`<span class="c-muted">0</span>`;
-    const endC=(r.vao||r.ra)?(r.diffFromEnd>0?(r.otEarnings>0?`<span class="c-green">+${r.diffFromEnd}'</span>`:`<span class="c-muted">—</span>`):r.diffFromEnd<0?`<span class="c-red">${r.diffFromEnd}'</span>`:`<span class="c-muted">0</span>`):`<span class="c-muted">—</span>`;
+    // Về sớm: diffFromEnd < 0 và không phải OT (otEarnings từ về sớm = 0 cho ngày thường)
+    const earlySecs=(!r.vao&&!r.ra)?null:(r.diffFromEnd<0?Math.abs(r.diffFromEnd):0);
+    const earlyC=(r.vao||r.ra)?(earlySecs>0?`<span class="c-red">-${earlySecs}'</span>`:`<span class="c-muted">0</span>`):`<span class="c-muted">—</span>`;
+    // OT: đến sớm (earlyArrMins) + về muộn — dùng otEarnings / wageMin để tính số phút
+    const wm=(wageState[emp.empName]??s.wageHour)/60;
+    const otMins=(r.vao||r.ra)?(wm>0?Math.round(r.otEarnings/wm):0):null;
+    const otC=(r.vao||r.ra)?(otMins>0?`<span class="c-green">+${otMins}'</span>`:`<span class="c-muted">0</span>`):`<span class="c-muted">—</span>`;
     const baseC=r.baseWage>0?`<span class="c-bold">${fmtMoney(r.baseWage)}</span>`:`<span class="c-muted">—</span>`;
     const adjC=r.adjust>0?`<span class="c-green">+${fmtMoney(r.adjust)}</span>`:r.adjust<0?`<span class="c-red">${fmtMoney(r.adjust)}</span>`:(r.baseWage>0?`<span class="c-muted">0</span>`:`<span class="c-muted">—</span>`);
     const chk=r.lateMins>0?`<input type="checkbox" onchange="toggleNoti('${escJs(emp.empName)}','${r.dateStr}')" ${notificationState[nk]?'checked':''}>`:`<span class="c-muted">—</span>`;
@@ -763,7 +771,7 @@ function renderDetail() {
       <td style="font-family:monospace">${fmtTime(r.vao)}</td>
       <td style="font-family:monospace">${raCell}</td>
       <td><span class="badge ${bmap[r.statusBadge]||'b-ok'}">${r.statusLabel}</span></td>
-      <td>${lateC}</td><td>${endC}</td><td>${chk}</td>
+      <td>${lateC}</td><td>${earlyC}</td><td>${otC}</td><td>${chk}</td>
       <td>${bInp}</td><td>${baseC}</td><td>${adjC}</td>
       <td style="font-size:11px;color:var(--caramel)">${r.ghuchu||''}</td>`;
     tbody.appendChild(tr);
@@ -789,12 +797,15 @@ function buildSheetData(emp) {
     [],['Lương tổng','','','',Math.round(s.totalExpectedSalary)],
     ['Thưởng 200k','','','',s.autoBonus200k],
     ['Thực nhận','','','',Math.round(s.grossWage)],[],
-    ['Ngày','Thứ','Chi nhánh','Giờ Vào','Giờ Ra','Ca','Trạng Thái','Trễ (phút)','Về sớm/OT','Báo Trước','Thưởng (₫)','Lương Ngày','Ghi Chú'],
+    ['Ngày','Thứ','Chi nhánh','Giờ Vào','Giờ Ra','Ca','Trạng Thái','Trễ (phút)','Về sớm (phút)','OT (phút)','Báo Trước','Thưởng (₫)','Lương Ngày','Ghi Chú'],
   ];
   emp.processedRows.forEach(r=>{
     if(r.statusBadge==='vang'&&!r.vao&&!r.ra) return;
     const nk=emp.empName+'|'+r.dateStr;
-    rows.push([r.dateStr,r.thu,BRANCHES[r.branch]?.label||'',fmtTime(r.vao),fmtTime(r.raEffective||r.ra),r.shiftName||'',r.statusLabel,r.lateMins||0,r.diffFromEnd||0,r.lateMins>0?(notificationState[nk]?'Có':'Không'):'—',r.bonusAmt||0,Math.round(r.baseWage||0),r.ghuchu||'']);
+    const wm2=(s.wageHour||22000)/60;
+    const earlyMins2=r.diffFromEnd<0?Math.abs(r.diffFromEnd):0;
+    const otMins2=wm2>0?Math.round(r.otEarnings/wm2):0;
+    rows.push([r.dateStr,r.thu,BRANCHES[r.branch]?.label||'',fmtTime(r.vao),fmtTime(r.raEffective||r.ra),r.shiftName||'',r.statusLabel,r.lateMins||0,earlyMins2,otMins2,r.lateMins>0?(notificationState[nk]?'Có':'Không'):'—',r.bonusAmt||0,Math.round(r.baseWage||0),r.ghuchu||'']);
   });
   return rows;
 }
@@ -809,19 +820,41 @@ function exportCurrentEmployee() {
   XLSX.writeFile(wb,`BangLuong_${emp.empName.replace(/\s+/g,'_')}.xlsx`);
 }
 
-function exportAllInOne() {
+async function exportAllInOne() {
   if(!allEmployeesData.length) return;
-  const wb=XLSX.utils.book_new();
+  const d=new Date(); const tag=`${d.getDate().toString().padStart(2,'0')}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getFullYear()}`;
+
+  // ── 1. File tổng hợp (nhiều sheet) ──────────────────────────────────────
+  const wbAll=XLSX.utils.book_new();
   const sum=[['Tên nhân viên','Loại NV','Nơi làm','Lương/giờ','Ngày làm','Tổng ca','Vi phạm','Lương gốc (₫)','Phạt 3k (₫)','Thưởng (₫)','Thưởng 200k','Thực nhận (₫)','Ghi chú']];
   allEmployeesData.forEach(e=>{
     const s=e.stats; const note=s.autoBonus200k>0?'Thưởng đầy ca/ngày':(s.totalShifts>25?'Gần đủ ca':s.workDays>25?'Gần đủ ngày':'');
     sum.push([e.empName,s.role==='lam_banh'?'Làm bánh/Bếp':'Bán hàng',e.branchLabel,fmtMoney(s.wageHour),s.workDays,s.totalShifts,s.lateDays+s.earlyDays,Math.round(s.totalBase),Math.round(s.totalPenalty3k),Math.round(s.totalBonusExtra),s.autoBonus200k,Math.round(s.grossWage),note]);
   });
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sum),'Tổng Hợp');
+  XLSX.utils.book_append_sheet(wbAll,XLSX.utils.aoa_to_sheet(sum),'Tổng Hợp');
   const used={};
-  allEmployeesData.forEach(emp=>{let sn=sanitize(emp.empName);if(used[sn]){used[sn]++;sn=sn.slice(0,28)+'_'+used[sn];}else used[sn]=1;XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(buildSheetData(emp)),sn);});
-  const d=new Date(); const tag=`${d.getDate().toString().padStart(2,'0')}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getFullYear()}`;
-  XLSX.writeFile(wb,`BangLuong_TatCa_${tag}.xlsx`);
+  allEmployeesData.forEach(emp=>{
+    let sn=sanitize(emp.empName);
+    if(used[sn]){used[sn]++;sn=sn.slice(0,28)+'_'+used[sn];}else used[sn]=1;
+    XLSX.utils.book_append_sheet(wbAll,XLSX.utils.aoa_to_sheet(buildSheetData(emp)),sn);
+  });
+  const allBuf=XLSX.write(wbAll,{bookType:'xlsx',type:'array'});
+
+  // ── 2. Đóng gói ZIP ──────────────────────────────────────────────────────
+  const zip=new JSZip();
+  zip.file(`BangLuong_TatCa_${tag}.xlsx`, allBuf);
+  const used2={};
+  allEmployeesData.forEach(emp=>{
+    const wbEmp=XLSX.utils.book_new();
+    let sn=sanitize(emp.empName);
+    if(used2[sn]){used2[sn]++;sn=sn.slice(0,28)+'_'+used2[sn];}else used2[sn]=1;
+    XLSX.utils.book_append_sheet(wbEmp,XLSX.utils.aoa_to_sheet(buildSheetData(emp)),sn);
+    const empBuf=XLSX.write(wbEmp,{bookType:'xlsx',type:'array'});
+    zip.file(`BangLuong_${emp.empName.replace(/\s+/g,'_')}.xlsx`, empBuf);
+  });
+
+  const zipBlob=await zip.generateAsync({type:'blob'});
+  saveAs(zipBlob, `BangLuong_${tag}.zip`);
 }
 </script>
 </body>
