@@ -862,6 +862,11 @@ function totCell(v,fmt){const c=xlCell(v,{bold:true,bg:'#FFF3E0',color:'#B45309'
 function redCell(v,fmt){const c=xlCell(v,{color:'#DC2626'});if(fmt&&typeof v==='number')c.z=fmt;return c;}
 function greenCell(v,fmt){const c=xlCell(v,{color:'#059669'});if(fmt&&typeof v==='number')c.z=fmt;return c;}
 function boldCell(v,fmt){const c=xlCell(v,{bold:true});if(fmt&&typeof v==='number')c.z=fmt;return c;}
+// Formula cell: kiểu totCell nhưng có gắn công thức Excel
+function fmlCell(f,v,fmt){
+  const c=totCell(typeof v==='number'?v:0,fmt); c.f=f; c.t='n';
+  if(fmt) c.z=fmt; return c;
+}
 const NUM='#,##0';
 
 function setCell(ws,R,C,cell){
@@ -881,15 +886,50 @@ function buildStyledEmpSheet(emp) {
               'Thưởng (₫)','Lương gốc (₫)','Trừ trễ (₫)','Trừ về sớm (₫)','Phạt 3k (₫)',
               'Lương ngày (₫)','Ghi chú'];
 
-  // ─ Thông tin NV ──────────────────────────────────────────────────────
+  // Columns: G=Trễ, H=Phút phạt, I=Về sớm, J=OT, L=Thưởng, M=Lương gốc, N=Trừ trễ, P=Phạt3k, Q=Lương ngày
+  const INFO_ROWS=8;
+  const DS=INFO_ROWS+2; // Excel row data start (1-based): info(8)+header(1)+1 = 10
+
+  // Pre-compute aggregates từ processedRows
+  const filtRows=emp.processedRows.filter(r=>!(r.statusBadge==='vang'&&!r.vao&&!r.ra));
+  const DE=DS+filtRows.length-1; // last data row (Excel)
+  let aLateM=0,aPenM=0,aOTM=0,aBonus=0,aPen3k=0;
+  filtRows.forEach(r=>{
+    aLateM+=(r.lateFromStart||0); aPenM+=(r.lateMins||0);
+    aOTM+=wm>0?Math.round(r.otEarnings/wm):0;
+    aBonus+=(r.bonusAmt||0); aPen3k+=(r.pLate3k||0);
+  });
+  const chdVal=s.role==='lam_banh'?s.workDays:s.totalShifts;
+  const chdLabel=s.role==='lam_banh'?'ngày':'ca';
+  const chdStatus=chdVal>=30?`🏆 ĐẠT (${chdVal}/30 ${chdLabel})`:`❌ Chưa đủ (${chdVal}/30 ${chdLabel})`;
+
+  // ─ Thông tin NV (8 dòng header) ────────────────────────────────────────
   const infoRows=[
+    // Row 0: Tên NV / Loại NV / Lương giờ
     [subHdr('Tên nhân viên'),xlCell(emp.empName,{bold:true,sz:12}),'','',
      subHdr('Loại NV'),xlCell(s.role==='lam_banh'?'Làm bánh/Bếp':'Bán hàng',{bold:true}),'','',
-     subHdr('Lương/giờ'),xlCell(s.wageHour,{bold:true,fmt:NUM})],
-    [subHdr('Nơi làm'),xlCell(emp.branchLabel,{bold:true})],
+     subHdr('Lương/giờ'),boldCell(s.wageHour,NUM)],
+    // Row 1: Nơi làm / Tổng ca / Ngày làm
+    [subHdr('Nơi làm'),xlCell(emp.branchLabel,{bold:true}),'','',
+     subHdr('Tổng ca'),boldCell(s.totalShifts),'','',
+     subHdr('Ngày làm'),boldCell(s.workDays)],
+    // Row 2: empty
     [],
-    [subHdr('Thưởng 200k'),xlCell(s.autoBonus200k||0,{bold:true}),
-     '','',subHdr('Thực nhận'),totCell(Math.round(s.grossWage),NUM)],
+    // Row 3: Tổng trễ / Tổng phút phạt / Phạt 3k
+    [subHdr('Tổng trễ (phút)'),fmlCell(`=-SUMIF(G${DS}:G${DE},"<0")`,aLateM),'','',
+     subHdr('Tổng phút phạt'),fmlCell(`=-SUMIF(H${DS}:H${DE},"<0")`,aPenM),'','',
+     subHdr('Phạt 3k (₫)'),fmlCell(`=-SUMIF(P${DS}:P${DE},"<0")`,Math.round(aPen3k),NUM)],
+    // Row 4: Tổng thưởng / 200k / Chuyên cần
+    [subHdr('Tổng thưởng (₫)'),fmlCell(`=SUMIF(L${DS}:L${DE},">0")`,Math.round(aBonus),NUM),'','',
+     subHdr('Thưởng 200k'),boldCell(s.autoBonus200k,NUM),'','',
+     subHdr('Chuyên cần'),xlCell(chdStatus,{bold:true,color:chdVal>=30?'#059669':'#DC2626'})],
+    // Row 5: empty
+    [],
+    // Row 6: Lương gốc tổng / Thực nhận
+    [subHdr('Lương gốc (₫)'),fmlCell(`=SUMIF(M${DS}:M${DE},">0")`,Math.round(s.totalExpectedSalary),NUM),'','',
+     subHdr('Tổng OT (phút)'),fmlCell(`=SUMIF(J${DS}:J${DE},">0")`,aOTM),'','',
+     subHdr('Thực nhận (₫)'),totCell(Math.round(s.grossWage),NUM)],
+    // Row 7: empty
     [],
   ];
   infoRows.forEach(row=>{ row.forEach((c,ci)=>setCell(ws,R,ci,typeof c==='string'?xlCell(c):c)); R++; });
