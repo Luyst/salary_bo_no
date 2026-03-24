@@ -224,7 +224,9 @@
           <thead><tr>
             <th>Ngày</th><th>Thứ</th><th>Chi nhánh</th>
             <th>Giờ Vào</th><th>Giờ Ra</th>
-            <th>Ca &amp; Trạng thái</th><th>Trễ (phút)</th>
+            <th>Ca &amp; Trạng thái</th>
+            <th>Trễ (phút)</th>
+            <th style="color:var(--red)">Phút phạt</th>
             <th style="color:var(--red)">Về sớm (phút)</th><th style="color:var(--green)">OT (phút)</th>
             <th>Báo trước</th><th style="color:var(--green)">Thưởng (₫)</th>
             <th>Lương gốc (₫)</th>
@@ -260,7 +262,7 @@ const BRANCHES = {
 function detectShift(vaoMin, raMin, branch) {
   if (vaoMin === null) return null;
   if (branch === 'dong_da' && vaoMin < 7*60+30)
-    return { name:'Bếp DD (7h–17h)', start:7*60, end:17*60, grace:3 };
+    return { name:'Bếp DD (7h–17h)', start:7*60, end:17*60, grace:3, lunchBreak:60 };
   if (vaoMin >= 15*60+30)
     return { name:'Ca 3 (17h–22h)', start:17*60, end:22*60, grace:3 };
   if (vaoMin >= 11*60+30) {
@@ -270,7 +272,7 @@ function detectShift(vaoMin, raMin, branch) {
   }
   if (raMin !== null && raMin >= 17*60+30) {
     if (branch === 'hung_vuong')
-      return { name:'Bếp HV (8h–18h)', start:8*60, end:18*60, grace:3 };
+      return { name:'Bếp HV (8h–18h)', start:8*60, end:18*60, grace:3, lunchBreak:60 };
     return { name:'Ca 1+2 (8h–18h)', start:8*60, end:18*60, grace:3 };
   }
   return { name:'Ca 1 (8h–13h)', start:8*60, end:13*60, grace:3 };
@@ -561,7 +563,7 @@ function calculate() {
       if(vao&&!ra&&overrideRa) ra=overrideRa;
 
       const vaoMin=toMin(vao), raMin=toMin(ra);
-      let workedMins=0,lateMins=0,diffFromEnd=0,baseWage=0,pLate3k=0,adjust=0;
+      let workedMins=0,lateMins=0,lateFromStart=0,diffFromEnd=0,baseWage=0,pLate3k=0,adjust=0;
       let shiftCount=0,otEarnings=0,lateDeductMoney=0,expectedSalaryWage=0;
       let statusBadge='',statusLabel='',shiftName='',ghuchu='';
       let dateBonusAmt=0,dateBonusNote='',bonusAmt=0;
@@ -582,14 +584,15 @@ function calculate() {
         if(shift){
           shiftName=shift.name; shiftCount=countShifts(shiftName);
           // Ca 2+3 (13h-22h) = 9h nhưng tính 2 ca × 5h = 10h
-          expectedSalaryWage=shiftName.includes('2+3')?shiftCount*5*wageHour:(shift.end-shift.start)/60*wageHour;
+          // Bếp trừ 1h nghỉ trưa → tính 9h tiêu chuẩn; Ca 2+3 giữ nguyên
+          expectedSalaryWage=shiftName.includes('2+3')?shiftCount*5*wageHour:((shift.end-shift.start)/60-(shift.lunchBreak||0)/60)*wageHour;
           totalExpectedSalary+=expectedSalaryWage; perBranch[br].expectedSalary+=expectedSalaryWage;
 
           const allowed=shift.start+shift.grace;
           if(vaoMin>allowed){ const raw=Math.round(vaoMin-allowed); lateMins=raw<=60?raw:0;
             if(lateMins>0){ lateDays++; statusBadge='late'; statusLabel='Trễ';
-              // Trừ lương = toàn bộ phút từ đầu ca (VD 8:11 → 11 phút), không phải chỉ sau grace
-              const lateFromStart=Math.round(vaoMin-shift.start);
+              // Trừ lương = toàn bộ phút từ đầu ca (VD 8:11 → 11 phút)
+              lateFromStart=Math.round(vaoMin-shift.start);
               lateDeductMoney=lateFromStart*wageMin; totalLateDeduct+=lateDeductMoney; perBranch[br].lateDeduct+=lateDeductMoney;
               // Phạt 3k = chỉ phút sau grace (VD 8:11 → 8 phút × 3k)
               pLate3k=notificationState[notiKey]?0:lateMins*3000; totalPenalty3k+=pLate3k; perBranch[br].penalty3k+=pLate3k; } }
@@ -653,8 +656,8 @@ function calculate() {
           const payVaoMin=isBanHangNormal ? Math.max(effectiveVaoMin,shift.start) : effectiveVaoMin;
           const payRaMin=isBanHangNormal ? Math.min(raMin,shift.end) : raMin;
           const payMinsRaw=Math.max(0,Math.round(payRaMin-payVaoMin));
-          // Ca 2+3: cộng 60 phút (bù phần overlap 17h-18h giữa 2 ca)
-          const payMins=shiftName.includes('2+3')?payMinsRaw+60:payMinsRaw;
+          // Ca 2+3: +60phút bù overlap; Bếp: trừ 1h nghỉ trưa
+          const payMins=shiftName.includes('2+3')?payMinsRaw+60:Math.max(0,payMinsRaw-(shift&&shift.lunchBreak||0));
           baseWage=(payMins/60)*wageHour;
           totalBase+=baseWage;
         }
@@ -667,7 +670,7 @@ function calculate() {
         if(overrideRa&&row.ra==null) ghuchu='📝 Giờ ra nhập tay';
         if(dateBonusAmt>0) ghuchu=(ghuchu?ghuchu+' · ':'')+`🎁 ${dateBonusNote||'Thưởng ngày '+dateStr}${shiftCount>1?' ×'+shiftCount+' ca':''}`;
       }
-      emp.processedRows.push({...row,vao:row.vao,ra:row.ra,raEffective:ra,workedMins,lateMins,diffFromEnd,baseWage,pLate3k,bonusAmt,adjust,otEarnings,lateDeductMoney,shiftCount,statusBadge,statusLabel,shiftName,ghuchu,expectedSalaryWage});
+      emp.processedRows.push({...row,vao:row.vao,ra:row.ra,raEffective:ra,workedMins,lateMins,lateFromStart,diffFromEnd,baseWage,pLate3k,bonusAmt,adjust,otEarnings,lateDeductMoney,shiftCount,statusBadge,statusLabel,shiftName,ghuchu,expectedSalaryWage});
     });
 
     const autoBonus200k=((role==='ban_hang'&&totalShifts>30)||(role==='lam_banh'&&workDays>=30))?200000:0;
@@ -747,7 +750,9 @@ function renderDetail() {
   emp.processedRows.forEach(r=>{
     if(r.statusBadge==='vang'&&!r.vao&&!r.ra) return;
     const nk=emp.empName+'|'+r.dateStr;
-    const lateC=r.lateMins>0?`<span class="c-red">-${r.lateMins}'</span>`:`<span class="c-muted">0</span>`;
+    // Trễ (phút) = phút thực từ đầu ca; Phút phạt = phút sau grace (dùng tính 3k)
+    const lateC=r.lateFromStart>0?`<span class="c-red">-${r.lateFromStart}'</span>`:`<span class="c-muted">0</span>`;
+    const penMinsC=r.lateMins>0?`<span class="c-red">${r.lateMins}'</span>`:`<span class="c-muted">0</span>`;
     const earlySecs=(!r.vao&&!r.ra)?null:(r.diffFromEnd<0?Math.abs(r.diffFromEnd):0);
     const earlyC=(r.vao||r.ra)?(earlySecs>0?`<span class="c-red">-${earlySecs}'</span>`:`<span class="c-muted">0</span>`):`<span class="c-muted">—</span>`;
     const wm=(wageState[emp.empName]??s.wageHour)/60;
@@ -783,7 +788,7 @@ function renderDetail() {
       <td style="font-family:monospace">${fmtTime(r.vao)}</td>
       <td style="font-family:monospace">${raCell}</td>
       <td><span class="badge ${bmap[r.statusBadge]||'b-ok'}">${r.statusLabel}</span></td>
-      <td>${lateC}</td><td>${earlyC}</td><td>${otC}</td><td>${chk}</td>
+      <td>${lateC}</td><td>${penMinsC}</td><td>${earlyC}</td><td>${otC}</td><td>${chk}</td>
       <td>${bInp}</td>
       <td>${baseC}</td><td>${lateDeductC}</td><td>${earlyDeductC}</td><td>${pen3kC}</td>
       <td>${dayWageC}</td>
@@ -793,10 +798,11 @@ function renderDetail() {
 
   // ── Hàng tổng cộng ─────────────────────────────────────────
   const wm2=(wageState[emp.empName]??s.wageHour)/60;
-  let sumLateM=0,sumEarlyM=0,sumOTM=0,sumBase=0,sumLateD=0,sumEarlyD=0,sumBonus=0,sumPen3k=0,sumDayWage=0;
+  let sumLateM=0,sumPenM=0,sumEarlyM=0,sumOTM=0,sumBase=0,sumLateD=0,sumEarlyD=0,sumBonus=0,sumPen3k=0,sumDayWage=0;
   emp.processedRows.forEach(r=>{
     if(r.statusBadge==='vang'&&!r.vao&&!r.ra) return;
-    sumLateM+=r.lateMins||0;
+    sumLateM+=(r.lateFromStart||0);
+    sumPenM+=(r.lateMins||0);
     sumEarlyM+=r.diffFromEnd<0?Math.abs(r.diffFromEnd):0;
     sumOTM+=wm2>0?Math.round(r.otEarnings/wm2):0;
     sumBase+=(r.expectedSalaryWage||0);
@@ -812,6 +818,7 @@ function renderDetail() {
   totRow.innerHTML=`
     <td colspan="6" style="color:var(--caramel);letter-spacing:1px;font-size:11px">Σ TỔNG CỘNG</td>
     <td><span class="c-red">-${sumLateM}'</span></td>
+    <td><span class="c-red">${sumPenM>0?sumPenM+"'":'0'}</span></td>
     <td><span class="c-red">-${sumEarlyM}'</span></td>
     <td><span class="c-green">+${sumOTM}'</span></td>
     <td></td><td><span class="c-green">${fmtMoney(sumBonus)}</span></td>
@@ -863,7 +870,7 @@ function buildStyledEmpSheet(emp) {
   const s=emp.stats; const wm=(s.wageHour||22000)/60;
   const ws={}; let R=0;
   const COLS=['Ngày','Thứ','Chi nhánh','Giờ Vào','Giờ Ra','Ca / Trạng thái',
-              'Trễ (phút)','Về sớm (phút)','OT (phút)','Báo trước',
+              'Trễ (phút)','Phút phạt','Về sớm (phút)','OT (phút)','Báo trước',
               'Thưởng (₫)','Lương gốc (₫)','Trừ trễ (₫)','Trừ về sớm (₫)','Phạt 3k (₫)',
               'Lương ngày (₫)','Ghi chú'];
 
@@ -884,7 +891,7 @@ function buildStyledEmpSheet(emp) {
   COLS.forEach((c,ci)=>setCell(ws,R,ci,hdr(c))); R++;
 
   // ─ Data rows ─────────────────────────────────────────────────────────
-    let sumLateM=0,sumEarlyM=0,sumOTM=0,sumBase=0,sumLateD=0,sumEarlyD=0,sumBonus=0,sumPen3k=0,sumDayWage=0;
+    let sumLateM=0,sumPenM=0,sumEarlyM=0,sumOTM=0,sumBase=0,sumLateD=0,sumEarlyD=0,sumBonus=0,sumPen3k=0,sumDayWage=0;
   emp.processedRows.forEach(r=>{
     if(r.statusBadge==='vang'&&!r.vao&&!r.ra) return;
     const nk=emp.empName+'|'+r.dateStr;
@@ -892,13 +899,14 @@ function buildStyledEmpSheet(emp) {
     const otMins=wm>0?Math.round(r.otEarnings/wm):0;
     const earlyDeduct=Math.max(0,Math.round((r.expectedSalaryWage||0)-r.baseWage-(r.lateDeductMoney||0)));
     const dayWage=Math.round(r.baseWage+(r.otEarnings||0)+(r.bonusAmt||0)-(r.lateDeductMoney||0)-earlyDeduct-(r.pLate3k||0));
-    sumLateM+=r.lateMins||0; sumEarlyM+=earlyMins; sumOTM+=otMins;
+    sumLateM+=(r.lateFromStart||0); sumPenM+=(r.lateMins||0); sumEarlyM+=earlyMins; sumOTM+=otMins;
     sumBase+=(r.expectedSalaryWage||0); sumLateD+=r.lateDeductMoney||0; sumEarlyD+=earlyDeduct;
     sumBonus+=r.bonusAmt||0; sumPen3k+=(r.pLate3k||0); sumDayWage+=dayWage;
     [xlCell(r.dateStr), xlCell(r.thu),
      xlCell(BRANCHES[r.branch]?.label||''),
      xlCell(fmtTime(r.vao)), xlCell(fmtTime(r.raEffective||r.ra)),
      xlCell(r.statusLabel),
+     r.lateFromStart>0?redCell(-(r.lateFromStart)):xlCell(0),
      r.lateMins>0?redCell(-(r.lateMins)):xlCell(0),
      earlyMins>0?redCell(-earlyMins):xlCell(0),
      otMins>0?greenCell(otMins):xlCell(0),
@@ -915,7 +923,8 @@ function buildStyledEmpSheet(emp) {
 
   // ─ Hàng tổng ─────────────────────────────────────────────────────────
   [totCell('TỔNG CỘNG'),totCell(''),totCell(''),totCell(''),totCell(''),totCell(''),
-   totCell(sumLateM?-sumLateM:0), totCell(sumEarlyM?-sumEarlyM:0), totCell(sumOTM||0),
+   totCell(sumLateM?-sumLateM:0), totCell(sumPenM||0),
+   totCell(sumEarlyM?-sumEarlyM:0), totCell(sumOTM||0),
    totCell(''), totCell(Math.round(sumBonus),NUM),
    totCell(Math.round(sumBase),NUM),
    totCell(sumLateD?-Math.round(sumLateD):0,NUM),
@@ -924,7 +933,7 @@ function buildStyledEmpSheet(emp) {
    totCell(Math.round(sumDayWage),NUM), totCell(''),
   ].forEach((c,ci)=>setCell(ws,R,ci,c));
 
-  ws['!cols']=[80,40,80,65,75,155,60,70,60,60,100,110,100,110,90,110,180].map(w=>({wpx:w}));
+  ws['!cols']=[80,40,80,65,75,155,60,55,70,60,60,100,110,100,110,90,110,180].map(w=>({wpx:w}));
   return ws;
 }
 
