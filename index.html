@@ -533,6 +533,7 @@ function calculate() {
   allEmployeesData.forEach(emp => {
     const wageHour = wageState[emp.empName]??defaultWage;
     const wageMin  = wageHour/60;
+    const role=roleState[emp.empName]||defaultRole;
     let totalBase=0,totalPenalty3k=0,totalBonusExtra=0,totalShifts=0;
     let workDays=0,lateDays=0,earlyDays=0,otDays=0;
     let totalOTEarnings=0,totalLateDeduct=0,totalExpectedSalary=0;
@@ -541,6 +542,7 @@ function calculate() {
 
     emp.rows.forEach(row => {
       const {dateStr,thu,kyHieu,branch}=row;
+      const isHoliday = dateBonus.some(db => db.date === dateStr);
       let {vao,ra}=row;
       const br=branch||'dong_da';
       const notiKey=emp.empName+'|'+dateStr;
@@ -585,7 +587,13 @@ function calculate() {
           diffFromEnd=Math.round(raMin-shift.end);
           if(diffFromEnd<0){earlyDays++;if(!statusBadge){statusBadge='early';statusLabel='Về sớm';}else statusLabel+=' + Về sớm';}
           else if(diffFromEnd>0){otDays++;if(!statusBadge){statusBadge='ot';statusLabel='OT';}else statusLabel+=' + OT';
-            otEarnings=diffFromEnd*wageMin; totalOTEarnings+=otEarnings; perBranch[br].otEarnings+=otEarnings;}
+            // Bếp/làm bánh: luôn tính OT. Bán hàng: chỉ tính khi ngày lễ
+            if(role!=='ban_hang'||isHoliday){otEarnings=diffFromEnd*wageMin;totalOTEarnings+=otEarnings;perBranch[br].otEarnings+=otEarnings;}}
+          // Bán hàng ngày lễ: cộng thêm OT phần đến sớm trước giờ ca
+          if(role==='ban_hang'&&isHoliday&&vaoMin<shift.start){
+            const earlyArrMins=Math.round(shift.start-vaoMin);
+            if(earlyArrMins>0){otEarnings+=earlyArrMins*wageMin;totalOTEarnings+=earlyArrMins*wageMin;perBranch[br].otEarnings+=earlyArrMins*wageMin;}
+          }
         }
         if(!statusBadge){statusBadge='ok';statusLabel='Đúng giờ';}
         if(shiftName) statusLabel+=' · '+shiftName;
@@ -599,7 +607,6 @@ function calculate() {
       emp.processedRows.push({...row,vao:row.vao,ra:row.ra,raEffective:ra,workedMins,lateMins,diffFromEnd,baseWage,pLate3k,bonusAmt,adjust,otEarnings,lateDeductMoney,shiftCount,statusBadge,statusLabel,shiftName,ghuchu});
     });
 
-    const role=roleState[emp.empName]||defaultRole;
     const autoBonus200k=((role==='ban_hang'&&totalShifts>30)||(role==='lam_banh'&&workDays>=30))?200000:0;
     const grossWage=totalBase+totalBonusExtra+autoBonus200k-totalPenalty3k;
     emp.stats={workDays,lateDays,earlyDays,otDays,totalShifts,totalBase,totalPenalty3k,totalBonusExtra,totalOTEarnings,totalLateDeduct,totalExpectedSalary,autoBonus200k,grossWage,role,perBranch,wageHour};
