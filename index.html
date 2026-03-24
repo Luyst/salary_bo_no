@@ -540,6 +540,7 @@ function calculate() {
       let workedMins=0,lateMins=0,diffFromEnd=0,baseWage=0,pLate3k=0,adjust=0;
       let shiftCount=0,otEarnings=0,lateDeductMoney=0,expectedSalaryWage=0;
       let statusBadge='',statusLabel='',shiftName='',ghuchu='';
+      let dateBonusAmt=0,dateBonusNote='',bonusAmt=0;
 
       if(!vao&&!ra){
         statusBadge='vang'; statusLabel=kyHieu==='V'?'Vắng':(kyHieu||'—');
@@ -550,9 +551,9 @@ function calculate() {
         workedMins=Math.max(0,Math.round(raMin-vaoMin));
         baseWage=(workedMins/60)*wageHour; totalBase+=baseWage;
         // Date-based auto bonus (applies because employee worked this day)
-        const dateBonusAmt = dateBonus.filter(db=>db.date===dateStr).reduce((s,db)=>s+db.amount,0);
-        const dateBonusNote = dateBonus.filter(db=>db.date===dateStr).map(db=>db.note).filter(Boolean).join(', ');
-        const bonusAmt = manualBonus + dateBonusAmt;
+        dateBonusAmt = dateBonus.filter(db=>db.date===dateStr).reduce((s,db)=>s+db.amount,0);
+        dateBonusNote = dateBonus.filter(db=>db.date===dateStr).map(db=>db.note).filter(Boolean).join(', ');
+        bonusAmt = manualBonus + dateBonusAmt;
 
         const shift=detectShift(vaoMin,raMin,br);
         if(shift){
