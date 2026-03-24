@@ -608,11 +608,14 @@ function calculate() {
             if(earlyArrMins>0){otEarnings+=earlyArrMins*wageMin;totalOTEarnings+=earlyArrMins*wageMin;perBranch[br].otEarnings+=earlyArrMins*wageMin;}
           }
         }
-        // Lương cơ bản: bán hàng ngày thường chỉ tính đúng giờ ca (đến sớm/về trễ đều không cộng)
+        // Lương cơ bản: đến trong grace period → tính từ shift.start (không mất giờ)
+        // Bán hàng ngày thường: cap cả 2 đầu [shift.start, shift.end]
         {
           const isBanHangNormal=(shift&&role==='ban_hang'&&!isHoliday);
-          const payVaoMin=isBanHangNormal?Math.max(vaoMin,shift.start):vaoMin;
-          const payRaMin=isBanHangNormal?Math.min(raMin,shift.end):raMin;
+          // Nếu đến trong grace (hoặc sớm hơn) → tính từ shift.start
+          const effectiveVaoMin=shift&&vaoMin<=shift.start+shift.grace ? shift.start : vaoMin;
+          const payVaoMin=isBanHangNormal ? Math.max(effectiveVaoMin,shift.start) : effectiveVaoMin;
+          const payRaMin=isBanHangNormal ? Math.min(raMin,shift.end) : raMin;
           const payMins=Math.max(0,Math.round(payRaMin-payVaoMin));
           baseWage=(payMins/60)*wageHour;
           totalBase+=baseWage;
@@ -707,7 +710,7 @@ function renderDetail() {
     if(r.statusBadge==='vang'&&!r.vao&&!r.ra) return;
     const nk=emp.empName+'|'+r.dateStr;
     const lateC=r.lateMins>0?`<span class="c-red">-${r.lateMins}'</span>`:`<span class="c-muted">0</span>`;
-    const endC=(r.vao||r.ra)?(r.diffFromEnd>0?`<span class="c-green">+${r.diffFromEnd}'</span>`:r.diffFromEnd<0?`<span class="c-red">${r.diffFromEnd}'</span>`:`<span class="c-muted">0</span>`):`<span class="c-muted">—</span>`;
+    const endC=(r.vao||r.ra)?(r.diffFromEnd>0?(r.otEarnings>0?`<span class="c-green">+${r.diffFromEnd}'</span>`:`<span class="c-muted">—</span>`):r.diffFromEnd<0?`<span class="c-red">${r.diffFromEnd}'</span>`:`<span class="c-muted">0</span>`):`<span class="c-muted">—</span>`;
     const baseC=r.baseWage>0?`<span class="c-bold">${fmtMoney(r.baseWage)}</span>`:`<span class="c-muted">—</span>`;
     const adjC=r.adjust>0?`<span class="c-green">+${fmtMoney(r.adjust)}</span>`:r.adjust<0?`<span class="c-red">${fmtMoney(r.adjust)}</span>`:(r.baseWage>0?`<span class="c-muted">0</span>`:`<span class="c-muted">—</span>`);
     const chk=r.lateMins>0?`<input type="checkbox" onchange="toggleNoti('${escJs(emp.empName)}','${r.dateStr}')" ${notificationState[nk]?'checked':''}>`:`<span class="c-muted">—</span>`;
