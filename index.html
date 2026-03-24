@@ -1,1113 +1,749 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Tính Lương – Tiệm Bánh</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap');
-
-    :root {
-      --cream: #f5f0e8;
-      --warm-white: #faf7f2;
-      --brown-deep: #2c1810;
-      --brown-mid: #5c3d2e;
-      --brown-light: #8b6355;
-      --caramel: #c4813a;
-      --caramel-light: #e8a855;
-      --green-soft: #4a7c59;
-      --red-soft: #b84040;
-      --border: #d4c4b0;
-      --shadow: rgba(44, 24, 16, 0.12);
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700;900&display=swap');
+    :root{
+      --bg:#f0f2f5;--surface:#ffffff;--surface2:#f4f5f7;--border:#e2e5e9;--border-light:#d1d5db;
+      --text:#111827;--text-muted:#6b7280;--text-dim:#9ca3af;
+      --caramel:#d97706;--caramel-d:#b45309;--green:#059669;--red:#dc2626;--blue:#2563eb;
+      --purple:#7c3aed;
     }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      background: var(--cream);
-      color: var(--brown-deep);
-      font-family: 'DM Mono', monospace;
-      min-height: 100vh;
-      background-image:
-        radial-gradient(ellipse at 10% 0%, rgba(196, 129, 58, 0.08) 0%, transparent 50%),
-        radial-gradient(ellipse at 90% 100%, rgba(92, 61, 46, 0.06) 0%, transparent 50%);
-    }
-
-    header {
-      padding: 48px 40px 32px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: flex-end;
-      gap: 24px;
-    }
-
-    .logo-mark {
-      width: 52px;
-      height: 52px;
-      border: 2px solid var(--caramel);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      flex-shrink: 0;
-    }
-
-    .header-text h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: 28px;
-      font-weight: 900;
-      letter-spacing: -0.5px;
-      line-height: 1;
-    }
-
-    .header-text p {
-      font-size: 11px;
-      color: var(--brown-light);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin-top: 4px;
-    }
-
-    main {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 40px 40px 80px;
-    }
-
-    /* STEP LAYOUT */
-    .steps {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      margin-bottom: 40px;
-    }
-
-    .step-card {
-      background: var(--warm-white);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 28px 32px;
-      position: relative;
-    }
-
-    .step-num {
-      font-family: 'Playfair Display', serif;
-      font-size: 64px;
-      font-weight: 900;
-      color: var(--border);
-      position: absolute;
-      top: 8px;
-      right: 20px;
-      line-height: 1;
-      user-select: none;
-    }
-
-    .step-label {
-      font-size: 10px;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      color: var(--caramel);
-      margin-bottom: 8px;
-    }
-
-    .step-card h2 {
-      font-family: 'Playfair Display', serif;
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 16px;
-    }
-
-    /* DROP ZONE */
-    .drop-zone {
-      border: 2px dashed var(--border);
-      border-radius: 4px;
-      padding: 32px 20px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      background: transparent;
-    }
-
-    .drop-zone:hover,
-    .drop-zone.drag-over {
-      border-color: var(--caramel);
-      background: rgba(196, 129, 58, 0.04);
-    }
-
-    .drop-zone.has-file {
-      border-color: var(--green-soft);
-      background: rgba(74, 124, 89, 0.04);
-    }
-
-    .drop-icon {
-      font-size: 28px;
-      margin-bottom: 8px;
-    }
-
-    .drop-text {
-      font-size: 12px;
-      color: var(--brown-light);
-      line-height: 1.6;
-    }
-
-    .drop-text strong {
-      color: var(--brown-deep);
-      display: block;
-      font-size: 13px;
-      margin-bottom: 4px;
-    }
-
-    #file-input {
-      display: none;
-    }
-
-    .file-status {
-      margin-top: 10px;
-      font-size: 11px;
-      color: var(--green-soft);
-      font-weight: 500;
-    }
-
-    /* WAGE INPUT */
-    .wage-group {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .wage-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .wage-label {
-      font-size: 12px;
-      color: var(--brown-mid);
-      width: 140px;
-      flex-shrink: 0;
-    }
-
-    .wage-input-wrap {
-      flex: 1;
-      position: relative;
-    }
-
-    .wage-input-wrap input {
-      width: 100%;
-      border: 1px solid var(--border);
-      background: var(--cream);
-      color: var(--brown-deep);
-      font-family: 'DM Mono', monospace;
-      font-size: 14px;
-      padding: 10px 48px 10px 14px;
-      border-radius: 3px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .wage-input-wrap input:focus {
-      border-color: var(--caramel);
-    }
-
-    .wage-input-wrap span {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 11px;
-      color: var(--brown-light);
-    }
-
-    .rule-note {
-      font-size: 11px;
-      color: var(--brown-light);
-      line-height: 1.6;
-      padding: 12px;
-      background: rgba(196, 129, 58, 0.06);
-      border-left: 2px solid var(--caramel-light);
-      border-radius: 0 3px 3px 0;
-    }
-
-    /* CALC BUTTON */
-    .calc-btn {
-      width: 100%;
-      margin-top: 24px;
-      padding: 16px;
-      background: var(--brown-deep);
-      color: var(--cream);
-      border: none;
-      border-radius: 3px;
-      font-family: 'DM Mono', monospace;
-      font-size: 13px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .calc-btn:hover {
-      background: var(--brown-mid);
-    }
-
-    .calc-btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
-    /* EXPORT BUTTON */
-    .export-btn {
-      padding: 10px 16px;
-      background: var(--green-soft);
-      color: var(--cream);
-      border: none;
-      border-radius: 3px;
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .export-btn:hover {
-      background: #385e43;
-    }
-
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;min-height:100vh}
+    /* HEADER */
+    header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100}
+    .logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--caramel),var(--caramel-d));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+    header h1{font-family:'Playfair Display',serif;font-size:19px;font-weight:700;color:var(--caramel)}
+    header p{font-size:11px;color:var(--text-muted)}
+    /* LAYOUT */
+    .app{max-width:1400px;margin:0 auto;padding:20px 24px 60px}
+    /* PANELS */
+    .panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:16px}
+    .panel-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+    .panel-title::after{content:'';flex:1;height:1px;background:var(--border)}
+    /* BRANCH GRID */
+    .branch-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+    .branch-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+    .branch-card.active{border-color:var(--green)}
+    .bname{font-weight:600;font-size:13px;margin-bottom:2px}
+    .bmeta{font-size:10px;color:var(--text-muted);margin-bottom:10px}
+    .drop-zone{border:1px dashed var(--border-light);border-radius:6px;padding:14px 10px;text-align:center;cursor:pointer;transition:all .2s;font-size:11px;color:var(--text-muted)}
+    .drop-zone:hover,.drop-zone.drag-over{border-color:var(--caramel);background:rgba(232,160,64,.06);color:var(--caramel)}
+    .drop-zone.has-file{border-color:var(--green);color:var(--green)}
+    .drop-zone .icon{font-size:22px;margin-bottom:4px!important}
+    .dstatus{margin-top:5px;font-size:10px}
+    input[type=file]{display:none}
+    /* SETTINGS ROW */
+    .settings-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+    .field{display:flex;flex-direction:column;gap:4px}
+    .field label{font-size:10px;color:var(--text-muted);letter-spacing:.5px}
+    .inp{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;padding:7px 10px;border-radius:6px;outline:none;transition:border-color .2s;box-shadow:inset 0 1px 2px rgba(0,0,0,.04)}
+    .inp:focus{border-color:var(--caramel)}
+    .inp-sm{width:110px}
+    select.inp{cursor:pointer}
+    .calc-btn{padding:9px 22px;background:var(--caramel);color:#000;border:none;border-radius:6px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.3px;white-space:nowrap}
+    .calc-btn:hover{background:var(--caramel-d)}
+    .calc-btn:disabled{opacity:.4;cursor:not-allowed}
+    .rule-note{flex:1;font-size:11px;color:var(--text-muted);line-height:1.7;padding:8px 12px;background:rgba(232,160,64,.06);border-left:2px solid var(--caramel);border-radius:0 6px 6px 0}
     /* RESULTS */
-    #results {
-      display: none;
-    }
-
-    .result-header {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .result-header h2 {
-      font-family: 'Playfair Display', serif;
-      font-size: 22px;
-      font-weight: 700;
-    }
-
-    .employee-tag {
-      font-size: 11px;
-      color: var(--brown-light);
-      letter-spacing: 1px;
-    }
-
+    #results{display:none}
+    /* OVERVIEW TABLE */
+    .tbl-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    thead th{padding:8px 10px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap;background:var(--surface)}
+    tbody td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+    tbody tr:hover td{background:rgba(255,255,255,.02)}
+    tbody tr.selected-row td{background:rgba(232,160,64,.06)}
+    /* DETAIL STICKY HEADER */
+    .detail-header{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;position:sticky;top:69px;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .detail-header h3{font-size:13px;font-weight:600;color:var(--caramel);white-space:nowrap}
+    .sel-emp{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;padding:7px 10px;border-radius:6px;outline:none;min-width:160px;cursor:pointer}
+    .sel-emp:focus{border-color:var(--caramel)}
+    .exp-btn{padding:7px 14px;border:1px solid var(--border);background:transparent;color:var(--text-muted);border-radius:6px;font-family:'Inter',sans-serif;font-size:11px;cursor:pointer;transition:all .2s}
+    .exp-btn:hover{border-color:var(--green);color:var(--green)}
+    .exp-btn.primary{background:var(--caramel);border-color:var(--caramel);color:#000;font-weight:600}
+    .exp-btn.primary:hover{background:var(--caramel-d)}
     /* SUMMARY CARDS */
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 32px;
-    }
-
-    .sum-card {
-      background: var(--warm-white);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 20px;
-      text-align: center;
-    }
-
-    .sum-card.highlight {
-      background: var(--brown-deep);
-      border-color: var(--brown-deep);
-      color: var(--cream);
-    }
-
-    .sum-card .sum-val {
-      font-family: 'Playfair Display', serif;
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-
-    .sum-card.highlight .sum-val {
-      color: var(--caramel-light);
-    }
-
-    .sum-card .sum-lbl {
-      font-size: 10px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--brown-light);
-    }
-
-    .sum-card.highlight .sum-lbl {
-      color: rgba(245, 240, 232, 0.6);
-    }
-
-    /* TABLE */
-    .table-wrap {
-      background: var(--warm-white);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 32px;
-    }
-
-    .table-title {
-      padding: 16px 24px;
-      border-bottom: 1px solid var(--border);
-      font-size: 11px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--caramel);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-    }
-
-    thead th {
-      padding: 10px 14px;
-      text-align: left;
-      font-size: 10px;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--brown-light);
-      background: rgba(196, 129, 58, 0.05);
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
-    }
-
-    tbody td {
-      padding: 10px 14px;
-      border-bottom: 1px solid rgba(212, 196, 176, 0.4);
-      vertical-align: middle;
-    }
-
-    tbody tr:last-child td {
-      border-bottom: none;
-    }
-
-    tbody tr:hover td {
-      background: rgba(196, 129, 58, 0.03);
-    }
-
-    .td-date {
-      color: var(--brown-mid);
-      font-weight: 500;
-    }
-
-    .td-thu {
-      color: var(--brown-light);
-      font-size: 11px;
-    }
-
-    .td-time {
-      font-variant-numeric: tabular-nums;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 2px;
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: 0.5px;
-    }
-
-    .badge-late {
-      background: rgba(184, 64, 64, 0.1);
-      color: var(--red-soft);
-    }
-
-    .badge-early {
-      background: rgba(74, 124, 89, 0.1);
-      color: var(--green-soft);
-    }
-
-    .badge-ot {
-      background: rgba(196, 129, 58, 0.12);
-      color: var(--caramel);
-    }
-
-    .badge-vang {
-      background: rgba(92, 61, 46, 0.1);
-      color: var(--brown-mid);
-    }
-
-    .badge-ok {
-      color: var(--border);
-      font-size: 10px;
-    }
-
-    .penalty {
-      color: var(--red-soft);
-    }
-
-    .bonus {
-      color: var(--green-soft);
-    }
-
-    .neutral {
-      color: var(--brown-light);
-    }
-
-    .wage-cell {
-      font-variant-numeric: tabular-nums;
-      font-weight: 500;
-    }
-
-    /* TỔNG KẾT */
-    .final-box {
-      background: var(--brown-deep);
-      color: var(--cream);
-      border-radius: 4px;
-      padding: 32px 40px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .final-box .final-label {
-      font-size: 11px;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      opacity: 0.6;
-      margin-bottom: 8px;
-    }
-
-    .final-box .final-name {
-      font-family: 'Playfair Display', serif;
-      font-size: 20px;
-      font-weight: 700;
-    }
-
-    .final-box .final-amount {
-      font-family: 'Playfair Display', serif;
-      font-size: 36px;
-      font-weight: 900;
-      color: var(--caramel-light);
-      letter-spacing: -1px;
-    }
-
-    .final-box .final-amount span {
-      font-size: 16px;
-      font-family: 'DM Mono', monospace;
-      opacity: 0.7;
-      margin-left: 6px;
-    }
-
-    .breakdown-row {
-      display: flex;
-      gap: 32px;
-      margin-top: 8px;
-    }
-
-    .breakdown-item {
-      font-size: 11px;
-      opacity: 0.7;
-    }
-
-    .breakdown-item strong {
-      opacity: 1;
-      color: var(--caramel-light);
-    }
-
-    /* EMPTY STATE */
-    .empty-note {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--brown-light);
-      font-size: 13px;
-    }
-
-    .empty-note .empty-icon {
-      font-size: 40px;
-      margin-bottom: 12px;
-    }
-
-    @media (max-width: 768px) {
-      main {
-        padding: 24px 20px 60px;
-      }
-
-      .steps {
-        grid-template-columns: 1fr;
-      }
-
-      .summary-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .final-box {
-        flex-direction: column;
-        gap: 16px;
-        text-align: center;
-      }
-
-      header {
-        padding: 28px 20px 20px;
-      }
-    }
+    .sum-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px}
+    .sum-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;text-align:center}
+    .sum-card.hl{background:linear-gradient(135deg,rgba(232,160,64,.15),rgba(232,160,64,.05));border-color:var(--caramel)}
+    .sum-val{font-size:18px;font-weight:700;font-family:'Playfair Display',serif;line-height:1;margin-bottom:4px}
+    .sum-lbl{font-size:10px;color:var(--text-muted);letter-spacing:.5px}
+    /* BADGES */
+    .badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:500}
+    .b-late{background:rgba(224,92,92,.15);color:var(--red)}
+    .b-early{background:rgba(61,186,122,.1);color:var(--green)}
+    .b-ot{background:rgba(232,160,64,.12);color:var(--caramel)}
+    .b-warn{background:rgba(232,160,64,.12);color:var(--caramel)}
+    .b-ok{color:var(--text-dim)}
+    .b-vang{color:var(--text-dim)}
+    /* CELLS */
+    .c-red{color:var(--red)}.c-green{color:var(--green)}.c-muted{color:var(--text-dim)}.c-caramel{color:var(--caramel)}
+    .c-bold{font-weight:600}
+    /* INPUTS IN TABLE */
+    .wage-emp-inp{width:90px;background:var(--surface2);border:1px solid var(--border);color:var(--caramel);font-family:'Inter',monospace;font-size:11px;padding:4px 7px;border-radius:5px;outline:none;text-align:right;box-shadow:inset 0 1px 2px rgba(0,0,0,.04)}
+    .wage-emp-inp:focus{border-color:var(--caramel)}
+    .bonus-inp{width:82px;background:var(--surface2);border:1px solid var(--border);color:var(--green);font-family:'Inter',monospace;font-size:11px;padding:4px 6px;border-radius:5px;outline:none;text-align:right}
+    .bonus-inp:focus{border-color:var(--green)}
+    .time-inp{width:76px;background:var(--surface2);border:1px solid var(--caramel);color:var(--caramel-d);font-family:'Inter',monospace;font-size:11px;padding:3px 6px;border-radius:5px;outline:none}
+    .time-inp:focus{border-color:var(--caramel-d)}
+    /* FINAL BOX */
+    .final-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .final-name{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--caramel)}
+    .final-sub{font-size:11px;color:var(--text-muted);margin-top:4px;display:flex;gap:16px;flex-wrap:wrap}
+    .final-sub span strong{color:var(--text)}
+    .final-amount{font-family:'Playfair Display',serif;font-size:36px;font-weight:900;color:var(--caramel);letter-spacing:-1px}
+    .final-lbl{font-size:10px;color:var(--text-muted);text-align:right;letter-spacing:1px;text-transform:uppercase}
+    .empty-note{text-align:center;padding:80px 20px;color:var(--text-muted)}
+    .empty-note .ei{font-size:40px;margin-bottom:12px}
+    .db-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:12px}
+    .db-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+    .db-chip{display:flex;align-items:center;gap:6px;background:rgba(217,119,6,.08);border:1px solid var(--caramel);border-radius:20px;padding:4px 10px 4px 12px;font-size:11px}
+    .db-chip .db-dt{font-weight:600;color:var(--caramel)}
+    .db-chip .db-amt{color:var(--green);font-weight:600}
+    .db-chip .db-nt{color:var(--text-muted)}
+    .db-chip .db-del{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;line-height:1;padding:0 0 0 2px;transition:color .2s}
+    .db-chip .db-del:hover{color:var(--red)}
+    .db-empty{font-size:12px;color:var(--text-muted)}
+    @media(max-width:900px){.branch-grid,.sum-grid{grid-template-columns:1fr 1fr}.final-box{flex-direction:column;text-align:center}}
   </style>
 </head>
-
 <body>
+<header>
+  <div class="logo">🥐</div>
+  <div><h1>Bảng Tính Lương</h1><p>Tiệm Bánh · 3 Chi Nhánh · Ca Linh Hoạt</p></div>
+</header>
 
-  <header>
-    <div class="logo-mark">🥐</div>
-    <div class="header-text">
-      <h1>Bảng Tính Lương</h1>
-      <p>Tiệm Bánh · Chấm Công Chi Tiết</p>
+<div class="app">
+  <!-- BRANCH UPLOADS -->
+  <div class="panel-title">📁 Tải File Chấm Công</div>
+  <div class="branch-grid">
+    <div class="branch-card" id="card-dd">
+      <div class="bname">📍 Đống Đa</div>
+      <div class="bmeta">Bếp 7h–17h · Bán hàng 8h–13h/13h–18h/17h–22h</div>
+      <div class="drop-zone" id="drop-dd" onclick="document.getElementById('file-dd').click()">
+        <div class="icon">📂</div><strong style="font-size:11px">Kéo thả hoặc nhấn</strong><br>.xlsx / .xls
+        <div class="dstatus" id="status-dd"></div>
+      </div>
+      <input type="file" id="file-dd" accept=".xlsx,.xls" multiple>
     </div>
-  </header>
-
-  <main>
-    <div class="steps">
-      <!-- STEP 1: Upload -->
-      <div class="step-card">
-        <div class="step-num">01</div>
-        <div class="step-label">Bước một</div>
-        <h2>Tải File Excel</h2>
-        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
-          <div class="drop-icon">📂</div>
-          <div class="drop-text">
-            <strong>Kéo thả (nhiều file) hoặc nhấn để chọn</strong>
-            File .xlsx chấm công nhân viên
-          </div>
-          <div class="file-status" id="file-status"></div>
-        </div>
-        <input type="file" id="file-input" accept=".xlsx,.xls" multiple>
+    <div class="branch-card" id="card-hv">
+      <div class="bname">📍 Hùng Vương</div>
+      <div class="bmeta">Bếp 8h–18h · Bán hàng 8h–13h/13h–18h/17h–22h (FTA Report)</div>
+      <div class="drop-zone" id="drop-hv" onclick="document.getElementById('file-hv').click()">
+        <div class="icon">📂</div><strong style="font-size:11px">Kéo thả hoặc nhấn</strong><br>.xlsx / .xls
+        <div class="dstatus" id="status-hv"></div>
       </div>
-
-      <!-- STEP 2: Lương -->
-      <div class="step-card">
-        <div class="step-num">02</div>
-        <div class="step-label">Bước hai</div>
-        <h2>Nhập Mức Lương</h2>
-
-        <div class="wage-group">
-          <div class="wage-row">
-            <div class="wage-label">Lương / giờ</div>
-            <div class="wage-input-wrap">
-              <input type="number" id="wage-hour" placeholder="25000" value="25000">
-              <span>₫/giờ</span>
-            </div>
-          </div>
-
-          <div class="rule-note">
-            📌 <strong>Quy tắc tính:</strong><br>
-            · Cho phép đi trễ đến <strong>7:03</strong> — quá thì trừ theo phút<br>
-            · Về trước <strong>17:00</strong> → trừ lương phút thiếu<br>
-            · Về sau <strong>17:00</strong> → cộng thêm OT<br>
-            · Trừ/thưởng theo đơn giá <strong>1 phút = lương giờ ÷ 60</strong>
-          </div>
-        </div>
-
-        <button class="calc-btn" id="calc-btn" onclick="calculate()" disabled>
-          ⚡ Tính Lương Ngay
-        </button>
-      </div>
+      <input type="file" id="file-hv" accept=".xlsx,.xls" multiple>
     </div>
-
-    <!-- RESULTS -->
-    <div id="results">
-      <div class="result-header">
-        <h2>Kết Quả Chi Tiết</h2>
-        <div style="display: flex; align-items: center; gap: 16px;">
-          <select id="emp-selector" onchange="changeEmployee()" style="padding: 8px; border-radius: 4px; border: 1px solid var(--border); font-family: 'DM Mono', monospace;"></select>
-          <div class="employee-tag" id="emp-tag" style="display:none;"></div>
-          <button class="export-btn" onclick="exportDataToExcel()">📥 Xuất 1 NV</button>
-          <button class="export-btn" style="background: var(--caramel);" onclick="exportAllToZip()">📦 Xuất ZIP Tất Cả</button>
-        </div>
+    <div class="branch-card" id="card-nt">
+      <div class="bname">📍 Núi Thành</div>
+      <div class="bmeta">Bán hàng 8h–13h/13h–18h/17h–22h (3 Ca)</div>
+      <div class="drop-zone" id="drop-nt" onclick="document.getElementById('file-nt').click()">
+        <div class="icon">📂</div><strong style="font-size:11px">Kéo thả hoặc nhấn</strong><br>.xlsx / .xls
+        <div class="dstatus" id="status-nt"></div>
       </div>
+      <input type="file" id="file-nt" accept=".xlsx,.xls" multiple>
+    </div>
+  </div>
 
-      <div class="table-wrap" id="manager-summary-wrap" style="display: none; margin-bottom: 32px;">
-        <div class="table-title">TỔNG HỢP QUẢN LÝ (TẤT CẢ NHÂN VIÊN)</div>
-        <div style="overflow-x:auto">
-          <table id="manager-table">
-            <thead>
-              <tr>
-                <th>Nhân viên</th>
-                <th>Ngày Làm</th>
-                <th>Vi Phạm</th>
-                <th>Lương Gốc</th>
-                <th>Tổng Phạt</th>
-                <th>Thưởng OT</th>
-                <th>Thực Nhận</th>
-              </tr>
-            </thead>
-            <tbody id="manager-body"></tbody>
-          </table>
-        </div>
+  <!-- SETTINGS -->
+  <div class="panel">
+    <div class="settings-row">
+      <div class="field"><label>Lương mặc định / giờ</label><div style="position:relative"><input type="number" id="default-wage" class="inp inp-sm" value="22000"><span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--text-muted)">₫</span></div></div>
+      <div class="rule-note">📌 Lương = giờ thực × lương/giờ · Grace 3 phút · Trễ không báo +3k/phút · Bán hàng >30 ca: +200k · Bếp ≥30 ngày: +200k · Từng NV có thể chỉnh lương/giờ riêng</div>
+      <button class="calc-btn" id="calc-btn" onclick="calculate()" disabled>⚡ Tính Lương</button>
+    </div>
+  </div>
+
+  <!-- DATE BONUS PANEL -->
+  <div class="panel">
+    <div class="panel-title">🎁 Thưởng Theo Ngày <span style="font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--text-muted)">— tự động cộng thưởng cho ai đi làm ngày đó</span></div>
+    <div class="db-row">
+      <div class="field"><label>Ngày thưởng</label><input type="text" id="db-date" class="inp" style="width:120px" placeholder="DD/MM/YYYY"></div>
+      <div class="field"><label>Số tiền (₫)</label><input type="number" id="db-amount" class="inp" style="width:110px" placeholder="50000"></div>
+      <div class="field" style="flex:1;min-width:160px"><label>Mục đích / ghi chú</label><input type="text" id="db-note" class="inp" placeholder="VD: Thưởng ngày 8/3, Lễ 30/4..."></div>
+      <button class="calc-btn" style="padding:8px 18px;font-size:11px" onclick="addDateBonus()">+ Thêm</button>
+    </div>
+    <div id="db-list" class="db-empty">Chưa có khoản thưởng nào theo ngày</div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+    <!-- OVERVIEW TABLE -->
+    <div class="panel" id="overview-panel" style="display:none">
+      <div class="panel-title">📊 Tổng Hợp Tất Cả Nhân Viên</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Nhân viên</th><th>Loại NV</th><th>Nơi làm</th>
+            <th>Lương/giờ</th><th>Ngày làm</th><th>Tổng ca</th>
+            <th>Vi phạm</th><th>Lương gốc</th><th>Phạt 3k</th>
+            <th style="color:var(--green)">Thưởng</th><th>Thực nhận</th><th>Ghi chú</th>
+          </tr></thead>
+          <tbody id="overview-body"></tbody>
+        </table>
       </div>
-
-      <div class="summary-grid" id="summary-grid"></div>
-
-      <div class="table-wrap">
-        <div class="table-title">Chi Tiết Từng Ngày</div>
-        <div style="overflow-x:auto">
-          <table id="detail-table">
-            <thead>
-              <tr>
-                <th>Ngày</th>
-                <th>Thứ</th>
-                <th>Giờ Vào</th>
-                <th>Giờ Ra</th>
-                <th>Trạng Thái</th>
-                <th>Trễ (phút)</th>
-                <th>Về (phút từ 17h)</th>
-                <th>Báo Trước</th>
-                <th>Lương Ngày</th>
-                <th>+/– (₫)</th>
-              </tr>
-            </thead>
-            <tbody id="detail-body"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="final-box" id="final-box"></div>
     </div>
 
-    <div class="empty-note" id="empty-note">
-      <div class="empty-icon">🧾</div>
-      Tải file Excel lên và nhập lương giờ để bắt đầu tính
+    <!-- DETAIL STICKY HEADER -->
+    <div class="detail-header">
+      <h3>Chi Tiết Nhân Viên</h3>
+      <select id="emp-selector" class="sel-emp" onchange="changeEmployee()"></select>
+      <div class="field" style="flex-direction:row;align-items:center;gap:8px">
+        <label style="font-size:10px;color:var(--text-muted);white-space:nowrap">Lương/giờ:</label>
+        <div style="position:relative">
+          <input type="number" id="detail-wage" class="inp" style="width:105px;padding-right:22px;font-size:12px" placeholder="22000" onchange="setWageFromDetail(this.value)">
+          <span style="position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--text-muted)">₫</span>
+        </div>
+      </div>
+      <div class="field" style="flex-direction:row;align-items:center;gap:8px">
+        <label style="font-size:10px;color:var(--text-muted);white-space:nowrap">Loại NV:</label>
+        <select id="role-select" class="inp" style="padding:6px 8px;font-size:11px" onchange="setCurrentRole()">
+          <option value="ban_hang">🛍 Bán hàng</option>
+          <option value="lam_banh">🍞 Làm bánh/Bếp</option>
+        </select>
+      </div>
+      <button class="exp-btn" onclick="exportCurrentEmployee()">📥 Xuất 1 NV</button>
+      <button class="exp-btn primary" onclick="exportAllInOne()">📦 Xuất Tổng Hợp</button>
     </div>
-  </main>
 
-    <script>
-    let allEmployeesData = [];
-    let notificationState = {}; // Key: "empName|dateStr"
-    let currentEmpIndex = 0;
+    <!-- SUMMARY CARDS -->
+    <div class="sum-grid" id="sum-grid"></div>
 
-    // --- DRAG & DROP ---
-    const dropZone = document.getElementById('drop-zone');
-    const fileInput = document.getElementById('file-input');
+    <!-- DAY DETAIL TABLE -->
+    <div class="panel" style="padding:0">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Ngày</th><th>Thứ</th><th>Chi nhánh</th>
+            <th>Giờ Vào</th><th>Giờ Ra</th>
+            <th>Ca & Trạng thái</th><th>Trễ (phút)</th><th>Về sớm/OT</th>
+            <th>Báo trước</th><th style="color:var(--green)">Thưởng (₫)</th>
+            <th>Lương ngày</th><th>Điều chỉnh</th><th>Ghi chú</th>
+          </tr></thead>
+          <tbody id="detail-body"></tbody>
+        </table>
+      </div>
+    </div>
 
-    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-    dropZone.addEventListener('drop', e => {
-      e.preventDefault();
-      dropZone.classList.remove('drag-over');
-      const files = e.dataTransfer.files;
-      if (files.length > 0) processFiles(files);
+    <!-- FINAL BOX -->
+    <div class="final-box" id="final-box" style="margin-top:14px"></div>
+  </div>
+
+  <div class="empty-note" id="empty-note">
+    <div class="ei">🧾</div>
+    Tải file Excel vào ít nhất 1 chi nhánh để bắt đầu tính
+  </div>
+</div>
+
+<script>
+// ═══ BRANCHES ═══════════════════════════════════════
+const BRANCHES = {
+  dong_da:    { label:'Đống Đa' },
+  hung_vuong: { label:'Hùng Vương' },
+  nui_thanh:  { label:'Núi Thành' },
+};
+
+function detectShift(vaoMin, raMin, branch) {
+  if (vaoMin === null) return null;
+  if (branch === 'dong_da' && vaoMin < 7*60+30)
+    return { name:'Bếp DD (7h–17h)', start:7*60, end:17*60, grace:3 };
+  if (vaoMin >= 15*60+30)
+    return { name:'Ca 3 (17h–22h)', start:17*60, end:22*60, grace:3 };
+  if (vaoMin >= 11*60+30) {
+    if (raMin !== null && raMin >= 21*60)
+      return { name:'Ca 2+3 (13h–22h)', start:13*60, end:22*60, grace:3 };
+    return { name:'Ca 2 (13h–18h)', start:13*60, end:18*60, grace:3 };
+  }
+  if (raMin !== null && raMin >= 17*60+30) {
+    if (branch === 'hung_vuong')
+      return { name:'Bếp HV (8h–18h)', start:8*60, end:18*60, grace:3 };
+    return { name:'Ca 1+2 (8h–18h)', start:8*60, end:18*60, grace:3 };
+  }
+  return { name:'Ca 1 (8h–13h)', start:8*60, end:13*60, grace:3 };
+}
+
+function countShifts(n) {
+  if (!n) return 0;
+  return (n.includes('1+2') || n.includes('2+3')) ? 2 : 1;
+}
+
+// ═══ STATE ═══════════════════════════════════════════
+let branchRaw = { dong_da:[], hung_vuong:[], nui_thanh:[] };
+let allEmployeesData = [];
+let notificationState = {}, bonusState = {}, roleState = {}, wageState = {}, clockOutOverride = {};
+let dateBonus = []; // [{date, amount, note}]
+let currentEmpIndex = 0;
+
+// ─ Date Bonus ─
+function addDateBonus() {
+  const dt  = (document.getElementById('db-date').value||'').trim();
+  const amt = parseFloat(document.getElementById('db-amount').value)||0;
+  const nt  = (document.getElementById('db-note').value||'').trim();
+  if (!dt || !amt) { alert('Nhập ngày và số tiền'); return; }
+  dateBonus.push({date:dt, amount:amt, note:nt});
+  document.getElementById('db-amount').value='';
+  document.getElementById('db-note').value='';
+  renderDateBonusList();
+  if (allEmployeesData.length) calculate();
+}
+function removeDateBonus(i) {
+  dateBonus.splice(i,1);
+  renderDateBonusList();
+  if (allEmployeesData.length) calculate();
+}
+function renderDateBonusList() {
+  const el=document.getElementById('db-list');
+  if (!dateBonus.length) { el.className='db-empty'; el.textContent='Chưa có khoản thưởng nào theo ngày'; return; }
+  el.className='db-chips';
+  el.innerHTML=dateBonus.map((db,i)=>`
+    <div class="db-chip">
+      <span class="db-dt">${db.date}</span>
+      <span class="db-amt">+${fmtMoney(db.amount)}</span>
+      <span class="db-nt">${db.note||'—'}</span>
+      <button class="db-del" onclick="removeDateBonus(${i})">&#215;</button>
+    </div>`).join('');
+}
+
+function setCurrentRole() {
+  const emp = allEmployeesData[currentEmpIndex];
+  if (emp) { roleState[emp.empName] = document.getElementById('role-select').value; calculate(); }
+}
+function setWage(name, val) { wageState[name] = parseFloat(val)||0; calculate(); }
+function setWageFromDetail(val) {
+  const emp = allEmployeesData[currentEmpIndex];
+  if (emp) { wageState[emp.empName] = parseFloat(val)||0; calculate(); }
+}
+function setClockOut(name, date, timeStr) {
+  const key = name+'|'+date;
+  if (!timeStr) { delete clockOutOverride[key]; }
+  else {
+    const [h,m] = timeStr.split(':').map(Number);
+    clockOutOverride[key] = {h,m,s:0};
+  }
+  calculate();
+}
+
+// ═══ DROP ZONES ══════════════════════════════════════
+function setupZone(zoneId, inputId, branch) {
+  const zone = document.getElementById(zoneId);
+  const input = document.getElementById(inputId);
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); if (e.dataTransfer.files.length) processFiles(e.dataTransfer.files, branch); });
+  input.addEventListener('change', () => { if (input.files.length) processFiles(input.files, branch); });
+}
+setupZone('drop-dd','file-dd','dong_da');
+setupZone('drop-hv','file-hv','hung_vuong');
+setupZone('drop-nt','file-nt','nui_thanh');
+
+// ═══ PROCESS FILES ════════════════════════════════════
+function processFiles(files, branch) {
+  const statusEl = document.getElementById('status-'+{dong_da:'dd',hung_vuong:'hv',nui_thanh:'nt'}[branch]);
+  const promises = Array.from(files).map(file => new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, {type:'array',cellDates:false});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const raw = XLSX.utils.sheet_to_json(ws, {header:1,raw:true,defval:null});
+        const parsed = branch==='hung_vuong' ? parseSheetHungVuong(raw,file.name)
+                     : branch==='nui_thanh'  ? parseSheetNuiThanh(raw,file.name)
+                     : parseSheetDongDa(raw,file.name);
+        if (parsed) { parsed.branch = branch; resolve(parsed); } else resolve(null);
+      } catch(err) { console.error(err); resolve(null); }
+    };
+    reader.readAsArrayBuffer(file);
+  }));
+  Promise.all(promises).then(results => {
+    const valid = results.filter(r => r && r.rows.length > 0);
+    branchRaw[branch] = valid;
+    const zone = document.getElementById('drop-'+{dong_da:'dd',hung_vuong:'hv',nui_thanh:'nt'}[branch]);
+    zone.classList.add('has-file');
+    if (statusEl) statusEl.textContent = valid.length > 0 ? `✓ ${files.length} file · ${valid.length} NV` : '⚠ Không đọc được';
+    rebuildAndCalculate();
+  });
+}
+
+function rebuildAndCalculate() {
+  const all = [...branchRaw.dong_da, ...branchRaw.hung_vuong, ...branchRaw.nui_thanh];
+  if (!all.length) return;
+  allEmployeesData = mergeEmployees(all);
+  document.getElementById('calc-btn').disabled = false;
+  const sel = document.getElementById('emp-selector');
+  sel.innerHTML = allEmployeesData.map((e,i) => `<option value="${i}">${e.empName}</option>`).join('');
+  currentEmpIndex = 0;
+  calculate();
+}
+
+// ═══ PARSERS ══════════════════════════════════════════
+function parseSheetDongDa(raw, fallback) {
+  const empName = extractEmpName(raw, fallback);
+  const rows = [];
+  for (const r of raw) {
+    if (!r || r[0]==null) continue;
+    const dateStr = toDateStr(r[0]);
+    if (!dateStr) continue;
+    rows.push({ dateStr, thu:str(r[1]), vao:parseTime(r[2]), ra:parseTime(r[3]), kyHieu:str(r[17]) });
+  }
+  return { empName, rows };
+}
+
+function parseSheetHungVuong(raw, fallback) {
+  let empName = '';
+  for (let i=0; i<Math.min(raw.length,5); i++) {
+    if (!raw[i]) continue;
+    const m = str(raw[i][0]).match(/Tên\s+nhân\s+viên\s*[:\-]\s*(.+)/i);
+    if (m) { empName = m[1].trim(); break; }
+  }
+  if (!empName) empName = fallback.replace(/\.[^/.]+$/,'');
+  empName = toTitleCase(stripPhongBan(empName));
+  const rows = [];
+  for (let i=5; i<raw.length; i++) {
+    const r = raw[i];
+    if (!r || r[0]==null || isNaN(r[0]) || r[0]<1) continue;
+    const dateStr = serialToDateStr(Math.floor(r[0]));
+    if (!dateStr) continue;
+    const vao = r[3] && r[3]>1 ? parseTimeFrac(r[3]-Math.floor(r[3])) : null;
+    const ra  = r[4] && r[4]>1 ? parseTimeFrac(r[4]-Math.floor(r[4])) : null;
+    const kyHieu = (!vao&&!ra&&(!r[8]||r[8]===0)) ? 'V' : '';
+    rows.push({ dateStr, thu:str(r[1]), vao, ra, kyHieu });
+  }
+  return { empName, rows };
+}
+
+function parseSheetNuiThanh(raw, fallback) {
+  const empName = extractEmpName(raw, fallback);
+  const rows = [];
+  let dataStart = 0;
+  for (let i=0; i<Math.min(raw.length,15); i++) {
+    if (raw[i] && raw[i][0] && /\d+\/\d+\/\d{4}/.test(str(raw[i][0]))) { dataStart=i; break; }
+  }
+  for (let i=dataStart; i<raw.length; i++) {
+    const r = raw[i];
+    if (!r || r[0]==null) continue;
+    const dateStr = mdYYYYtoDateStr(str(r[0]).trim());
+    if (!dateStr) continue;
+    rows.push({
+      dateStr, thu:str(r[1]),
+      vao: parseTime(firstNE(r[2],r[4],r[6])),
+      ra:  parseTime(lastNE(r[3],r[5],r[7])),
+      kyHieu: str(r[17])
     });
-    fileInput.addEventListener('change', () => {
-      if (fileInput.files.length > 0) processFiles(fileInput.files);
-    });
+  }
+  return { empName, rows };
+}
 
-    function processFiles(files) {
-      allEmployeesData = [];
-      notificationState = {};
-      const promises = Array.from(files).map(file => {
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            try {
-              const wb = XLSX.read(e.target.result, { type: 'array', cellDates: false });
-              const ws = wb.Sheets[wb.SheetNames[0]];
-              const raw = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
-              resolve(parseSheet(raw, file.name));
-            } catch (err) {
-              resolve(null);
-            }
-          };
-          reader.readAsArrayBuffer(file);
-        });
-      });
+// ═══ HELPERS ══════════════════════════════════════════
+function firstNE(...v) { return v.find(x => x!=null&&x!==0&&x!=='') ?? null; }
+function lastNE(...v)  { let r=null; for(const x of v) if(x!=null&&x!==0&&x!=='') r=x; return r; }
+function str(v) { return v!=null?String(v).trim():''; }
 
-      Promise.all(promises).then(results => {
-        allEmployeesData = results.filter(r => r !== null && r.rows.length > 0);
-        if (allEmployeesData.length === 0) {
-          alert('Không có dữ liệu hợp lệ từ các file tải lên.');
-          return;
-        }
-
-        dropZone.classList.add('has-file');
-        document.getElementById('file-status').textContent = '✓ Đã tải thành công ' + allEmployeesData.length + ' file nhân viên';
-        document.getElementById('calc-btn').disabled = false;
-        
-        const selector = document.getElementById('emp-selector');
-        selector.innerHTML = allEmployeesData.map((emp, idx) => `<option value="${idx}">${emp.empName}</option>`).join('');
-        currentEmpIndex = 0;
-        
-        // Auto calculate when loaded
-        calculate();
-      });
+function extractEmpName(raw, fallback) {
+  let name='';
+  outer: for(let i=0;i<Math.min(raw.length,25);i++){
+    if(!raw[i]) continue;
+    for(let j=0;j<raw[i].length;j++){
+      const c=raw[i][j]; if(!c) continue;
+      const m=str(c).match(/Tên\s+nhân\s+viên\s*[:\-]\s*(.+?)(?:\s{2,}|\t|(?=\s*(?:Bộ\s*phận|Phòng\s*ban|Mã)\s*[:\-])|$)/i);
+      if(m){name=m[1].trim();break outer;}
     }
+  }
+  if(!name) name=fallback.replace(/\.[^/.]+$/,'');
+  return toTitleCase(stripPhongBan(name));
+}
 
-    function parseSheet(raw, fallbackName) {
-      let empName = 'Nhân viên';
-      for (let r of raw) {
-        if (r[0] && String(r[0]).includes('Tên nhân viên:')) {
-          const matched = String(r[0]).match(/Tên nhân viên:\s*([^\n]+)/);
-          if (matched) empName = matched[1].trim();
-          break;
-        }
-      }
-      if (empName === 'Nhân viên' && fallbackName) {
-         empName = fallbackName.replace(/\.[^/.]+$/, "");
-      }
+function toTitleCase(s) { return s.toLowerCase().replace(/(^|\s)([^\s])/g,(_,sp,c)=>sp+c.toUpperCase()); }
+function stripPhongBan(s) {
+  s=s.replace(/^(?:Phòng\s*ban|Bộ\s*phận|Phòng|Ban)\s*[:\-]?\s*/gi,'').trim();
+  s=s.replace(/\s+(?:Bộ\s*phận|Phòng\s*ban|Phòng|Mã\s*(?:NV|nhân\s*viên))\s*[:\-].*/gi,'').trim();
+  return s;
+}
 
-      const rows = [];
-      for (let i = 0; i < raw.length; i++) {
-        const r = raw[i];
-        if (!r[0]) continue;
-        const dateStr = String(r[0]).trim();
-        if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) continue;
+function toDateStr(v) {
+  if(v==null) return '';
+  const s=str(v);
+  if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) return mdYYYYtoDateStr(s);
+  if(!isNaN(v)&&v>1&&v<200000){ try{ const dt=XLSX.SSF.parse_date_code(Math.floor(v)); if(dt&&dt.y>2000) return `${String(dt.d).padStart(2,'0')}/${String(dt.m).padStart(2,'0')}/${dt.y}`; }catch{} }
+  return '';
+}
+function serialToDateStr(n){ try{const dt=XLSX.SSF.parse_date_code(n);if(dt&&dt.y>2000)return `${String(dt.d).padStart(2,'0')}/${String(dt.m).padStart(2,'0')}/${dt.y}`;}catch{} return '';}
+function mdYYYYtoDateStr(s){ const p=s.split('/'); if(p.length!==3)return ''; const[m,d,y]=[+p[0],+p[1],+p[2]]; if(isNaN(m)||isNaN(d)||isNaN(y))return ''; return `${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`; }
 
-        const thu = r[1] ? String(r[1]).trim() : '';
-        const vao = parseTime(r[2]);
-        const ra = parseTime(r[3]);
-        const kyHieu = r[17] ? String(r[17]).trim() : '';
-        rows.push({ dateStr, thu, vao, ra, kyHieu });
-      }
+function parseTime(v) {
+  if(v==null||v==='') return null;
+  const s=str(v); const m=s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if(m) return {h:+m[1],m:+m[2],s:+(m[3]||0)};
+  const n=Number(v); if(!isNaN(n)&&n>0&&n<1) return parseTimeFrac(n);
+  return null;
+}
+function parseTimeFrac(f){ const t=Math.round(f*86400); return {h:Math.floor(t/3600),m:Math.floor((t%3600)/60),s:t%60}; }
+function toMin(t){ return t?t.h*60+t.m+t.s/60:null; }
+function fmtTime(t){ return t?String(t.h).padStart(2,'0')+':'+String(t.m).padStart(2,'0'):'—'; }
+function fmtMoney(n){ return Math.round(n||0).toLocaleString('vi-VN')+' ₫'; }
+function parseDateMs(s){ const[d,mo,y]=s.split('/').map(Number); return new Date(y,mo-1,d).getTime(); }
+function escJs(s){ return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
-      return { empName, rows };
-    }
+// ═══ MERGE ════════════════════════════════════════════
+function mergeEmployees(list) {
+  const map = {};
+  list.forEach(emp => {
+    const key = emp.empName.trim().toLowerCase();
+    if (!map[key]) map[key] = { empName:emp.empName.trim(), rows:[], branches:new Set() };
+    map[key].rows = map[key].rows.concat(emp.rows.map(r=>({...r,branch:emp.branch})));
+    map[key].branches.add(emp.branch);
+  });
+  return Object.values(map).map(emp => {
+    const seen={};
+    emp.rows.forEach(r=>{ const k=r.dateStr+'|'+r.branch; if(!seen[k]||(!seen[k].vao&&!seen[k].ra&&(r.vao||r.ra))) seen[k]=r; });
+    emp.rows=Object.values(seen).sort((a,b)=>parseDateMs(a.dateStr)-parseDateMs(b.dateStr));
+    emp.branchLabel=[...emp.branches].map(b=>BRANCHES[b]?.label||b).join(', ');
+    return emp;
+  });
+}
 
-    function parseTime(val) {
-      if (val === null || val === undefined || val === '') return null;
-      const s = String(val).trim();
-      const m = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
-      if (m) {
-        return { h: parseInt(m[1]), m: parseInt(m[2]), s: parseInt(m[3] || 0) };
-      }
-      if (!isNaN(val) && val > 0 && val < 1) {
-        const totalSec = Math.round(val * 86400);
-        const h = Math.floor(totalSec / 3600);
-        const mn = Math.floor((totalSec % 3600) / 60);
-        const sc = totalSec % 60;
-        return { h, m: mn, s: sc };
-      }
-      return null;
-    }
+// ═══ CALCULATE ════════════════════════════════════════
+function calculate() {
+  if (!allEmployeesData.length) return;
+  const defaultWage   = parseFloat(document.getElementById('default-wage').value)||22000;
+  const defaultRole   = document.getElementById('role-select')?.value || 'ban_hang';
 
-    function toMinutes(t) {
-      if (!t) return null;
-      return t.h * 60 + t.m + t.s / 60;
-    }
+  allEmployeesData.forEach(emp => {
+    const wageHour = wageState[emp.empName]??defaultWage;
+    const wageMin  = wageHour/60;
+    let totalBase=0,totalPenalty3k=0,totalBonusExtra=0,totalShifts=0;
+    let workDays=0,lateDays=0,earlyDays=0,otDays=0;
+    let totalOTEarnings=0,totalLateDeduct=0,totalExpectedSalary=0;
+    const perBranch={};
+    emp.processedRows=[];
 
-    function fmtTime(t) {
-      if (!t) return '—';
-      return String(t.h).padStart(2, '0') + ':' + String(t.m).padStart(2, '0');
-    }
+    emp.rows.forEach(row => {
+      const {dateStr,thu,kyHieu,branch}=row;
+      let {vao,ra}=row;
+      const br=branch||'dong_da';
+      const notiKey=emp.empName+'|'+dateStr;
+      const manualBonus=bonusState[notiKey]||0;
+      const overrideRa=clockOutOverride[notiKey];
+      if(!perBranch[br]) perBranch[br]={shifts:0,otEarnings:0,lateDeduct:0,bonusExtra:0,penalty3k:0,expectedSalary:0,workDays:0};
 
-    function fmtMoney(n) {
-      return n.toLocaleString('vi-VN') + ' ₫';
-    }
+      // Apply clock-out override if vao exists but ra missing
+      if(vao&&!ra&&overrideRa) ra=overrideRa;
 
-    function calculate() {
-      if (allEmployeesData.length === 0) return;
+      const vaoMin=toMin(vao), raMin=toMin(ra);
+      let workedMins=0,lateMins=0,diffFromEnd=0,baseWage=0,pLate3k=0,adjust=0;
+      let shiftCount=0,otEarnings=0,lateDeductMoney=0,expectedSalaryWage=0;
+      let statusBadge='',statusLabel='',shiftName='',ghuchu='';
 
-      const wageHour = parseFloat(document.getElementById('wage-hour').value) || 0;
-      const wageMin = wageHour / 60;
-      const ALLOW_LATE = 7 * 60 + 3;  
-      const END_NORMAL = 17 * 60;     
-      const WORK_HOURS = 10;          
-
-      allEmployeesData.forEach(emp => {
-        let totalBase = 0, totalPenalty = 0, totalBonus = 0;
-        let totalPenaltyLate = 0, totalPenaltyEarly = 0, totalBonusOT = 0;
-        let workDays = 0, lateDays = 0, earlyDays = 0, otDays = 0;
-        
-        emp.processedRows = [];
-
-        emp.rows.forEach(row => {
-          const { dateStr, thu, vao, ra, kyHieu } = row;
-          const vaoMin = toMinutes(vao);
-          const raMin = toMinutes(ra);
-
-          let lateMins = 0;
-          let diffFromEnd = 0; 
-          let baseWage = 0;
-          let adjust = 0;
-          let statusBadge = '';
-          let statusLabel = '';
-          let pLate = 0;
-          let pEarly = 0;
-          let bOT = 0;
-
-          if (!vao && !ra) {
-            if (kyHieu === 'V') { statusBadge = 'vang'; statusLabel = 'Vắng'; }
-            else { statusBadge = 'vang'; statusLabel = kyHieu || '—'; }
-          } else if (vao && !ra) {
-            statusBadge = 'vang'; statusLabel = 'Thiếu giờ ra';
-          } else {
-            workDays++;
-            baseWage = WORK_HOURS * wageHour;
-            totalBase += baseWage;
-
-            if (vaoMin !== null && vaoMin > ALLOW_LATE) {
-              lateMins = Math.round(vaoMin - ALLOW_LATE);
-              lateDays++;
-              statusBadge = 'late';
-              statusLabel = 'Trễ';
-            }
-
-            if (raMin !== null) {
-              diffFromEnd = Math.round(raMin - END_NORMAL);
-              if (diffFromEnd < 0) {
-                earlyDays++;
-                if (!statusBadge) { statusBadge = 'early'; statusLabel = 'Về sớm'; }
-                else statusLabel += ' + Về sớm';
-              } else if (diffFromEnd > 0) {
-                otDays++;
-                if (!statusBadge) { statusBadge = 'ot'; statusLabel = 'OT'; }
-                else statusLabel += ' + OT';
-              }
-            }
-
-            if (!statusBadge) { statusBadge = 'ok'; statusLabel = 'Đúng giờ'; }
-
-            if (lateMins > 0) {
-              let baseLate = lateMins * wageMin;
-              let notiKey = emp.empName + '|' + dateStr;
-              let extraLate = (notificationState[notiKey]) ? 0 : (lateMins * 3000);
-              pLate = baseLate + extraLate;
-              totalPenalty += pLate;
-              totalPenaltyLate += pLate;
-            }
-
-            if (diffFromEnd < 0) {
-              let earlyMins = Math.abs(diffFromEnd);
-              let baseEarly = earlyMins * wageMin;
-              // KHÔNG phạt 3k khi về sớm nữa, chỉ trừ lương
-              pEarly = baseEarly;
-              totalPenalty += pEarly;
-              totalPenaltyEarly += pEarly;
-            } else if (diffFromEnd > 0) {
-              bOT = diffFromEnd * wageMin;
-              totalBonus += bOT;
-              totalBonusOT += bOT;
-            }
-
-            adjust = bOT - pEarly - pLate;
-          }
-
-          emp.processedRows.push({
-             ...row, lateMins, diffFromEnd, baseWage, adjust, pLate, pEarly, bOT, statusBadge, statusLabel
-          });
-        });
-
-        const grossWage = totalBase + totalBonus - totalPenalty;
-
-        emp.stats = {
-          workDays, lateDays, earlyDays, otDays,
-          totalBase, totalPenalty, totalBonus,
-          totalPenaltyLate, totalPenaltyEarly, totalBonusOT,
-          grossWage
-        };
-      });
-
-      // Render Manager Table
-      const mBody = document.getElementById('manager-body');
-      mBody.innerHTML = allEmployeesData.map(emp => `
-        <tr>
-          <td style="font-weight:bold; color:var(--brown-deep)">${emp.empName}</td>
-          <td>${emp.stats.workDays}</td>
-          <td style="color:var(--red-soft)">${emp.stats.lateDays + emp.stats.earlyDays}</td>
-          <td>${fmtMoney(emp.stats.totalBase)}</td>
-          <td style="color:var(--red-soft)">-${fmtMoney(emp.stats.totalPenalty)}</td>
-          <td style="color:var(--green-soft)">+${fmtMoney(emp.stats.totalBonus)}</td>
-          <td style="font-weight:bold; color:var(--caramel)">${fmtMoney(emp.stats.grossWage)}</td>
-        </tr>
-      `).join('');
-
-      renderIndividualDetail();
-
-      document.getElementById('results').style.display = 'block';
-      if(allEmployeesData.length > 1) {
-         document.getElementById('manager-summary-wrap').style.display = 'block';
+      if(!vao&&!ra){
+        statusBadge='vang'; statusLabel=kyHieu==='V'?'Vắng':(kyHieu||'—');
+      } else if(vao&&!ra){
+        statusBadge='warn'; statusLabel='Thiếu giờ ra'; ghuchu='⚠️ Nhập giờ ra để tính';
       } else {
-         document.getElementById('manager-summary-wrap').style.display = 'none';
+        workDays++; perBranch[br].workDays++;
+        workedMins=Math.max(0,Math.round(raMin-vaoMin));
+        baseWage=(workedMins/60)*wageHour; totalBase+=baseWage;
+        // Date-based auto bonus (applies because employee worked this day)
+        const dateBonusAmt = dateBonus.filter(db=>db.date===dateStr).reduce((s,db)=>s+db.amount,0);
+        const dateBonusNote = dateBonus.filter(db=>db.date===dateStr).map(db=>db.note).filter(Boolean).join(', ');
+        const bonusAmt = manualBonus + dateBonusAmt;
+
+        const shift=detectShift(vaoMin,raMin,br);
+        if(shift){
+          shiftName=shift.name; shiftCount=countShifts(shiftName);
+          expectedSalaryWage=(shift.end-shift.start)/60*wageHour;
+          totalExpectedSalary+=expectedSalaryWage; perBranch[br].expectedSalary+=expectedSalaryWage;
+
+          const allowed=shift.start+shift.grace;
+          if(vaoMin>allowed){ const raw=Math.round(vaoMin-allowed); lateMins=raw<=60?raw:0;
+            if(lateMins>0){ lateDays++; statusBadge='late'; statusLabel='Trễ';
+              lateDeductMoney=lateMins*wageMin; totalLateDeduct+=lateDeductMoney; perBranch[br].lateDeduct+=lateDeductMoney;
+              pLate3k=notificationState[notiKey]?0:lateMins*3000; totalPenalty3k+=pLate3k; perBranch[br].penalty3k+=pLate3k; } }
+
+          diffFromEnd=Math.round(raMin-shift.end);
+          if(diffFromEnd<0){earlyDays++;if(!statusBadge){statusBadge='early';statusLabel='Về sớm';}else statusLabel+=' + Về sớm';}
+          else if(diffFromEnd>0){otDays++;if(!statusBadge){statusBadge='ot';statusLabel='OT';}else statusLabel+=' + OT';
+            otEarnings=diffFromEnd*wageMin; totalOTEarnings+=otEarnings; perBranch[br].otEarnings+=otEarnings;}
+        }
+        if(!statusBadge){statusBadge='ok';statusLabel='Đúng giờ';}
+        if(shiftName) statusLabel+=' · '+shiftName;
+        totalShifts+=shiftCount; perBranch[br].shifts+=shiftCount;
+        totalBonusExtra+=bonusAmt; perBranch[br].bonusExtra+=bonusAmt;
+        adjust=bonusAmt-pLate3k;
+        if(overrideRa&&row.ra==null) ghuchu='📝 Giờ ra nhập tay';
+        if(dateBonusAmt>0) ghuchu=(ghuchu?ghuchu+' · ':'')+`🎁 ${dateBonusNote||'Thưởng ngày '+ dateStr}`;
       }
-      document.getElementById('empty-note').style.display = 'none';
-    }
+      emp.processedRows.push({...row,vao:row.vao,ra:row.ra,raEffective:ra,workedMins,lateMins,diffFromEnd,baseWage,pLate3k,bonusAmt:manualBonus+(dateBonusAmt||0),adjust,otEarnings,lateDeductMoney,shiftCount,statusBadge,statusLabel,shiftName,ghuchu});
+    });
 
-    function changeEmployee() {
-      currentEmpIndex = document.getElementById('emp-selector').value;
-      renderIndividualDetail();
-    }
+    const role=roleState[emp.empName]||defaultRole;
+    const autoBonus200k=((role==='ban_hang'&&totalShifts>30)||(role==='lam_banh'&&workDays>=30))?200000:0;
+    const grossWage=totalBase+totalBonusExtra+autoBonus200k-totalPenalty3k;
+    emp.stats={workDays,lateDays,earlyDays,otDays,totalShifts,totalBase,totalPenalty3k,totalBonusExtra,totalOTEarnings,totalLateDeduct,totalExpectedSalary,autoBonus200k,grossWage,role,perBranch,wageHour};
+  });
 
-    function renderIndividualDetail() {
-      const emp = allEmployeesData[currentEmpIndex];
-      if(!emp) return;
-      const stats = emp.stats;
+  renderOverview(); renderDetail();
+  document.getElementById('results').style.display='block';
+  document.getElementById('overview-panel').style.display=allEmployeesData.length>1?'block':'none';
+  document.getElementById('empty-note').style.display='none';
+}
 
-      document.getElementById('summary-grid').innerHTML = `
-        <div class="sum-card">
-          <div class="sum-val">${stats.workDays}</div>
-          <div class="sum-lbl">Ngày làm việc</div>
-        </div>
-        <div class="sum-card">
-          <div class="sum-val" style="color:var(--red-soft)">${stats.lateDays + stats.earlyDays}</div>
-          <div class="sum-lbl">Lần vi phạm</div>
-        </div>
-        <div class="sum-card">
-          <div class="sum-val" style="color:var(--green-soft)">${stats.otDays}</div>
-          <div class="sum-lbl">Ngày tăng ca</div>
-        </div>
-        <div class="sum-card highlight">
-          <div class="sum-val">${fmtMoney(stats.grossWage)}</div>
-          <div class="sum-lbl">Tổng thực nhận</div>
-        </div>
-      `;
+// ═══ RENDER OVERVIEW ══════════════════════════════════
+function renderOverview() {
+  document.getElementById('overview-body').innerHTML = allEmployeesData.map((emp,i) => {
+    const s=emp.stats;
+    const bonusTotal=s.totalBonusExtra+s.autoBonus200k;
+    const note=s.autoBonus200k>0?'🎉 +200k':(s.totalShifts>25?'🟡 Gần đủ ca':s.workDays>25?'🟡 Gần đủ ngày':'');
+    const roleLabel=s.role==='lam_banh'?'🍞 Bếp':'🛍 Bán hàng';
+    const wv=wageState[emp.empName]??s.wageHour;
+    return `<tr class="${i===currentEmpIndex?'selected-row':''}" onclick="selectEmp(${i})" style="cursor:pointer">
+      <td class="c-muted">${i+1}</td>
+      <td class="c-bold">${emp.empName}</td>
+      <td style="font-size:11px">${roleLabel}</td>
+      <td style="font-size:11px;color:var(--text-muted)">${emp.branchLabel||'—'}</td>
+      <td><input type="number" class="wage-emp-inp" value="${wv}" onchange="setWage('${escJs(emp.empName)}',this.value)" onclick="event.stopPropagation()"></td>
+      <td>${s.workDays}</td>
+      <td><strong>${s.totalShifts}</strong></td>
+      <td class="${s.lateDays+s.earlyDays>0?'c-red':''}">${s.lateDays+s.earlyDays}</td>
+      <td>${fmtMoney(s.totalBase)}</td>
+      <td class="${s.totalPenalty3k>0?'c-red':''}">${s.totalPenalty3k>0?'-'+fmtMoney(s.totalPenalty3k):'—'}</td>
+      <td class="${bonusTotal>0?'c-green':''}">${bonusTotal>0?'+'+fmtMoney(bonusTotal):'—'}</td>
+      <td class="c-bold c-caramel">${fmtMoney(s.grossWage)}</td>
+      <td style="font-size:11px;color:var(--green)">${note}</td>
+    </tr>`;
+  }).join('');
+}
 
-      document.getElementById('final-box').innerHTML = `
-        <div>
-          <div class="final-label">Nhân viên chi tiết</div>
-          <div class="final-name">${emp.empName}</div>
-          <div class="breakdown-row">
-            <div class="breakdown-item">Lương gốc: <strong>${fmtMoney(stats.totalBase)}</strong></div>
-            <div class="breakdown-item">OT cộng: <strong>+${fmtMoney(stats.totalBonus)}</strong></div>
-            <div class="breakdown-item">Khấu trừ: <strong>-${fmtMoney(stats.totalPenalty)}</strong></div>
-          </div>
-        </div>
-        <div>
-          <div class="final-label">Thực nhận</div>
-          <div class="final-amount">${fmtMoney(stats.grossWage)}</div>
-        </div>
-      `;
+function selectEmp(i) { currentEmpIndex=i; document.getElementById('emp-selector').value=i; renderDetail(); renderOverview(); document.getElementById('detail-header')||document.querySelector('.detail-header').scrollIntoView({behavior:'smooth',block:'start'}); }
+function changeEmployee() { currentEmpIndex=parseInt(document.getElementById('emp-selector').value); const emp=allEmployeesData[currentEmpIndex]; if(emp) document.getElementById('role-select').value=roleState[emp.empName]||'ban_hang'; renderDetail(); renderOverview(); }
 
-      const tbody = document.getElementById('detail-body');
-      tbody.innerHTML = '';
-      emp.processedRows.forEach(r => {
-        const badgeMap = { late: 'badge-late', early: 'badge-early', ot: 'badge-ot', vang: 'badge-vang', ok: 'badge-ok' };
-        const badgeClass = badgeMap[r.statusBadge] || 'badge-ok';
+// ═══ RENDER DETAIL ════════════════════════════════════
+function renderDetail() {
+  const emp=allEmployeesData[currentEmpIndex]; if(!emp) return;
+  const s=emp.stats;
+  const bonusTotal=s.totalBonusExtra+s.autoBonus200k;
+  document.getElementById('role-select').value=roleState[emp.empName]||'ban_hang';
+  const detailWageEl=document.getElementById('detail-wage');
+  if(detailWageEl) detailWageEl.value=wageState[emp.empName]??s.wageHour;
 
-        const lateCell = r.lateMins > 0 ? `<span class="penalty">-${r.lateMins}'</span>` : `<span class="neutral">0</span>`;
-        const endCell = r.diffFromEnd !== undefined && (r.vao || r.ra)
-          ? (r.diffFromEnd > 0 ? `<span class="bonus">+${r.diffFromEnd}'</span>` : r.diffFromEnd < 0 ? `<span class="penalty">${r.diffFromEnd}'</span>` : `<span class="neutral">0</span>`)
-          : `<span class="neutral">—</span>`;
-        const baseCell = r.baseWage > 0 ? `<span class="wage-cell">${fmtMoney(r.baseWage)}</span>` : `<span class="neutral">—</span>`;
+  document.getElementById('sum-grid').innerHTML=`
+    <div class="sum-card"><div class="sum-val">${s.workDays}</div><div class="sum-lbl">Ngày làm</div></div>
+    <div class="sum-card"><div class="sum-val"><strong>${s.totalShifts}</strong></div><div class="sum-lbl">Tổng ca</div></div>
+    <div class="sum-card"><div class="sum-val ${s.lateDays+s.earlyDays>0?'c-red':''}">${s.lateDays+s.earlyDays}</div><div class="sum-lbl">Vi phạm</div></div>
+    <div class="sum-card"><div class="sum-val c-green">${fmtMoney(bonusTotal)}${s.autoBonus200k>0?'<span class="tag-bonus">+200k🎉</span>':''}</div><div class="sum-lbl">Thưởng</div></div>
+    <div class="sum-card hl"><div class="sum-val">${fmtMoney(s.grossWage)}</div><div class="sum-lbl">Thực nhận</div></div>`;
 
-        let adjText = '';
-        if (r.adjust > 0) adjText = `<span class="bonus">+${fmtMoney(Math.abs(r.adjust))}</span>`;
-        else if (r.adjust < 0) adjText = `<span class="penalty">-${fmtMoney(Math.abs(r.adjust))}</span>`;
-        else if (r.baseWage > 0) adjText = `<span class="neutral">0</span>`;
-        else adjText = `<span class="neutral">—</span>`;
+  document.getElementById('final-box').innerHTML=`
+    <div>
+      <div class="final-name">${emp.empName}</div>
+      <div class="final-sub">
+        <span>Nơi làm: <strong>${emp.branchLabel}</strong></span>
+        <span>Lương gốc: <strong>${fmtMoney(s.totalBase)}</strong></span>
+        <span>Phạt 3k: <strong class="c-red">${s.totalPenalty3k>0?'-'+fmtMoney(s.totalPenalty3k):'0'}</strong></span>
+        <span>Thưởng: <strong class="c-green">+${fmtMoney(bonusTotal)}</strong></span>
+        ${s.autoBonus200k>0?'<span class="c-green">🎉 Thưởng đầy ca!</span>':''}
+      </div>
+    </div>
+    <div style="text-align:right"><div class="final-lbl">Thực nhận</div><div class="final-amount">${fmtMoney(s.grossWage)}</div></div>`;
 
-        // Chỉ có đi trễ mới có ô báo trước! (yêu cầu khách: "về sớm sẽ ko phạt 3 ngàn nữa gì chắc chắn đã thông báo rồi")
-        const hasPenalty = (r.lateMins > 0);
-        const notiKey = emp.empName + '|' + r.dateStr;
-        const checkboxHtml = hasPenalty ? `<input type="checkbox" onchange="toggleNotification('${emp.empName}', '${r.dateStr}')" ${notificationState[notiKey] ? 'checked' : ''} title="Có báo trước">` : `<span class="neutral">—</span>`;
+  const bmap={late:'b-late',early:'b-early',ot:'b-ot',vang:'b-vang',warn:'b-warn',ok:'b-ok'};
+  const tbody=document.getElementById('detail-body');
+  tbody.innerHTML='';
+  emp.processedRows.forEach(r=>{
+    if(r.statusBadge==='vang'&&!r.vao&&!r.ra) return;
+    const nk=emp.empName+'|'+r.dateStr;
+    const lateC=r.lateMins>0?`<span class="c-red">-${r.lateMins}'</span>`:`<span class="c-muted">0</span>`;
+    const endC=(r.vao||r.ra)?(r.diffFromEnd>0?`<span class="c-green">+${r.diffFromEnd}'</span>`:r.diffFromEnd<0?`<span class="c-red">${r.diffFromEnd}'</span>`:`<span class="c-muted">0</span>`):`<span class="c-muted">—</span>`;
+    const baseC=r.baseWage>0?`<span class="c-bold">${fmtMoney(r.baseWage)}</span>`:`<span class="c-muted">—</span>`;
+    const adjC=r.adjust>0?`<span class="c-green">+${fmtMoney(r.adjust)}</span>`:r.adjust<0?`<span class="c-red">${fmtMoney(r.adjust)}</span>`:(r.baseWage>0?`<span class="c-muted">0</span>`:`<span class="c-muted">—</span>`);
+    const chk=r.lateMins>0?`<input type="checkbox" onchange="toggleNoti('${escJs(emp.empName)}','${r.dateStr}')" ${notificationState[nk]?'checked':''}>`:`<span class="c-muted">—</span>`;
+    const bval=bonusState[nk]||'';
+    const bInp=(r.vao||r.ra)?`<input type="number" class="bonus-inp" value="${bval}" placeholder="0" onchange="updateBonus('${escJs(emp.empName)}','${r.dateStr}',this.value)">`:`<span class="c-muted">—</span>`;
+    const brLbl=BRANCHES[r.branch]?.label||'—';
 
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="td-date">${r.dateStr}</td>
-          <td class="td-thu">${r.thu}</td>
-          <td class="td-time">${fmtTime(r.vao)}</td>
-          <td class="td-time">${fmtTime(r.ra)}</td>
-          <td><span class="badge ${badgeClass}">${r.statusLabel}</span></td>
-          <td>${lateCell}</td>
-          <td>${endCell}</td>
-          <td>${checkboxHtml}</td>
-          <td>${baseCell}</td>
-          <td>${adjText}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
+    // Editable clock-out if vao exists but no original ra
+    let raCell;
+    if(r.vao && !r.ra) {
+      const ovKey=emp.empName+'|'+r.dateStr;
+      const ov=clockOutOverride[ovKey];
+      const ovVal=ov?`${String(ov.h).padStart(2,'0')}:${String(ov.m).padStart(2,'0')}`:'';
+      raCell=`<input type="time" class="time-inp" value="${ovVal}" placeholder="--:--" onchange="setClockOut('${escJs(emp.empName)}','${r.dateStr}',this.value)" title="Nhập giờ ra">`;
+    } else { raCell=fmtTime(r.raEffective); }
 
-    function toggleNotification(empName, dateStr) {
-      const key = empName + '|' + dateStr;
-      if (!notificationState) notificationState = {};
-      notificationState[key] = !notificationState[key];
-      calculate();
-    }
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="color:var(--text-muted)">${r.dateStr}</td>
+      <td style="color:var(--text-dim);font-size:11px">${r.thu}</td>
+      <td style="font-size:11px;color:var(--text-muted)">${brLbl}</td>
+      <td style="font-family:monospace">${fmtTime(r.vao)}</td>
+      <td style="font-family:monospace">${raCell}</td>
+      <td><span class="badge ${bmap[r.statusBadge]||'b-ok'}">${r.statusLabel}</span></td>
+      <td>${lateC}</td><td>${endC}</td><td>${chk}</td>
+      <td>${bInp}</td><td>${baseC}</td><td>${adjC}</td>
+      <td style="font-size:11px;color:var(--caramel)">${r.ghuchu||''}</td>`;
+    tbody.appendChild(tr);
+  });
+}
 
-    function buildEmployeeWorkbook(emp) {
-      const stats = emp.stats;
-      const wb = XLSX.utils.book_new();
+function toggleNoti(n,d){const k=n+'|'+d;notificationState[k]=!notificationState[k];calculate();}
+function updateBonus(n,d,v){bonusState[n+'|'+d]=parseFloat(v)||0;calculate();}
 
-      const summaryData = [
-        ["Tên nhân viên", emp.empName],
-        ["Tổng bị trừ do đi trễ (-)", stats.totalPenaltyLate || 0],
-        ["Tổng bị trừ khi về sớm (-)", stats.totalPenaltyEarly || 0],
-        ["Tổng được cộng tăng ca (+)", stats.totalBonusOT || 0],
-        ["Tổng lương gốc", stats.totalBase || 0],
-        ["Tổng khấu trừ", stats.totalPenalty || 0],
-        ["Tổng lương thực nhận", stats.grossWage || 0]
-      ];
-      const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, wsSummary, "Tổng Kết");
+// ═══ EXPORT ═══════════════════════════════════════════
+function buildSheetData(emp) {
+  const s=emp.stats; const allBr=Object.keys(BRANCHES); const pb=s.perBranch||{};
+  const rows=[
+    ['Tên nhân viên',emp.empName,'','Loại NV',s.role==='lam_banh'?'Làm bánh/Bếp':'Bán hàng','','Lương/giờ',fmtMoney(s.wageHour)],
+    ['Nơi làm',emp.branchLabel],[],
+    ['',...allBr.map(b=>BRANCHES[b].label),'Tổng'],
+    ['Tổng số ca',...allBr.map(b=>pb[b]?.shifts||0),s.totalShifts],
+    ['Ngày làm',...allBr.map(b=>pb[b]?.workDays||0),s.workDays],
+    ['Làm thêm giờ (₫)',...allBr.map(b=>Math.round(pb[b]?.otEarnings||0)),Math.round(s.totalOTEarnings)],
+    ['Trừ đi trễ (₫)',...allBr.map(b=>-(Math.round(pb[b]?.lateDeduct||0))),-(Math.round(s.totalLateDeduct))],
+    ['Thưởng thêm (₫)',...allBr.map(b=>Math.round(pb[b]?.bonusExtra||0)),Math.round(s.totalBonusExtra)],
+    ['Phạt 3k (₫)',...allBr.map(b=>-(Math.round(pb[b]?.penalty3k||0))),-(Math.round(s.totalPenalty3k))],
+    [],['Lương tổng','','','',Math.round(s.totalExpectedSalary)],
+    ['Thưởng 200k','','','',s.autoBonus200k],
+    ['Thực nhận','','','',Math.round(s.grossWage)],[],
+    ['Ngày','Thứ','Chi nhánh','Giờ Vào','Giờ Ra','Ca','Trạng Thái','Trễ (phút)','Về sớm/OT','Báo Trước','Thưởng (₫)','Lương Ngày','Ghi Chú'],
+  ];
+  emp.processedRows.forEach(r=>{
+    if(r.statusBadge==='vang'&&!r.vao&&!r.ra) return;
+    const nk=emp.empName+'|'+r.dateStr;
+    rows.push([r.dateStr,r.thu,BRANCHES[r.branch]?.label||'',fmtTime(r.vao),fmtTime(r.raEffective||r.ra),r.shiftName||'',r.statusLabel,r.lateMins||0,r.diffFromEnd||0,r.lateMins>0?(notificationState[nk]?'Có':'Không'):'—',r.bonusAmt||0,Math.round(r.baseWage||0),r.ghuchu||'']);
+  });
+  return rows;
+}
 
-      const detailData = [
-        ["Ngày", "Thứ", "Giờ Vào", "Giờ Ra", "Trạng Thái", "Trễ (phút)", "Về (phút từ 17h)", "Báo Trước", "Lương Ngày", "+/– (₫)"]
-      ];
-      emp.processedRows.forEach(r => {
-        let notiText = (r.lateMins > 0) ? (notificationState[emp.empName + '|' + r.dateStr] ? "Có" : "Không") : "—";
-        detailData.push([
-          r.dateStr, r.thu, fmtTime(r.vao), fmtTime(r.ra), r.statusLabel,
-          r.lateMins || 0, r.diffFromEnd || 0, notiText, r.baseWage || 0, r.adjust || 0
-        ]);
-      });
-      const wsDetail = XLSX.utils.aoa_to_sheet(detailData);
-      XLSX.utils.book_append_sheet(wb, wsDetail, "Chi tiết");
+function sanitize(n){return n.replace(/[:\\\/\?\*\[\]]/g,'').slice(0,31);}
 
-      return wb;
-    }
+function exportCurrentEmployee() {
+  if(!allEmployeesData.length) return;
+  const emp=allEmployeesData[currentEmpIndex];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(buildSheetData(emp)),sanitize(emp.empName));
+  XLSX.writeFile(wb,`BangLuong_${emp.empName.replace(/\s+/g,'_')}.xlsx`);
+}
 
-    function exportDataToExcel() {
-      if (allEmployeesData.length === 0) return;
-      const emp = allEmployeesData[currentEmpIndex];
-      const wb = buildEmployeeWorkbook(emp);
-      XLSX.writeFile(wb, `BangLuong_${emp.empName.replace(/\s+/g, '_')}.xlsx`);
-    }
-
-    async function exportAllToZip() {
-      if (allEmployeesData.length === 0) return;
-      if (typeof JSZip === 'undefined' || typeof saveAs === 'undefined') {
-         alert("Đang tải thư viện Zip, vui lòng đợi giây lát rồi thử lại.");
-         return;
-      }
-      
-      const zip = new JSZip();
-      
-      const managerData = [
-        ["Tên nhân viên", "Ngày làm việc", "Lần vi phạm (Trễ/Sớm)", "Lương gốc", "Tổng phạt", "Tổng tăng ca", "Thực nhận"]
-      ];
-      allEmployeesData.forEach(emp => {
-        managerData.push([
-          emp.empName,
-          emp.stats.workDays,
-          emp.stats.lateDays + emp.stats.earlyDays,
-          emp.stats.totalBase,
-          emp.stats.totalPenalty,
-          emp.stats.totalBonusOT,
-          emp.stats.grossWage
-        ]);
-      });
-      const wbMgr = XLSX.utils.book_new();
-      const wsMgr = XLSX.utils.aoa_to_sheet(managerData);
-      XLSX.utils.book_append_sheet(wbMgr, wsMgr, "TongHopQuanLy");
-      
-      // Write array instead of array buffer or base64
-      const mgrExcelBuffer = XLSX.write(wbMgr, { bookType: "xlsx", type: "array" });
-      zip.file("BangLuong_TongHopQuanLy.xlsx", mgrExcelBuffer);
-
-      allEmployeesData.forEach(emp => {
-         const wb = buildEmployeeWorkbook(emp);
-         const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-         zip.file(`BangLuong_${emp.empName.replace(/\s+/g, '_')}.xlsx`, excelBuffer);
-      });
-
-      const content = await zip.generateAsync({ type: "blob" });
-      saveAs(content, "TatCaNhanVien_XuatZIP.zip");
-    }
-  </script>
+function exportAllInOne() {
+  if(!allEmployeesData.length) return;
+  const wb=XLSX.utils.book_new();
+  const sum=[['Tên nhân viên','Loại NV','Nơi làm','Lương/giờ','Ngày làm','Tổng ca','Vi phạm','Lương gốc (₫)','Phạt 3k (₫)','Thưởng (₫)','Thưởng 200k','Thực nhận (₫)','Ghi chú']];
+  allEmployeesData.forEach(e=>{
+    const s=e.stats; const note=s.autoBonus200k>0?'Thưởng đầy ca/ngày':(s.totalShifts>25?'Gần đủ ca':s.workDays>25?'Gần đủ ngày':'');
+    sum.push([e.empName,s.role==='lam_banh'?'Làm bánh/Bếp':'Bán hàng',e.branchLabel,fmtMoney(s.wageHour),s.workDays,s.totalShifts,s.lateDays+s.earlyDays,Math.round(s.totalBase),Math.round(s.totalPenalty3k),Math.round(s.totalBonusExtra),s.autoBonus200k,Math.round(s.grossWage),note]);
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sum),'Tổng Hợp');
+  const used={};
+  allEmployeesData.forEach(emp=>{let sn=sanitize(emp.empName);if(used[sn]){used[sn]++;sn=sn.slice(0,28)+'_'+used[sn];}else used[sn]=1;XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(buildSheetData(emp)),sn);});
+  const d=new Date(); const tag=`${d.getDate().toString().padStart(2,'0')}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getFullYear()}`;
+  XLSX.writeFile(wb,`BangLuong_TatCa_${tag}.xlsx`);
+}
+</script>
 </body>
-
 </html>
