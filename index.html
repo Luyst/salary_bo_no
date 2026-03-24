@@ -589,13 +589,17 @@ function calculate() {
           totalExpectedSalary+=expectedSalaryWage; perBranch[br].expectedSalary+=expectedSalaryWage;
 
           const allowed=shift.start+shift.grace;
-          if(vaoMin>allowed){ const raw=Math.round(vaoMin-allowed); lateMins=raw<=60?raw:0;
-            if(lateMins>0){ lateDays++; statusBadge='late'; statusLabel='Trễ';
-              // Trừ lương = toàn bộ phút từ đầu ca (VD 8:11 → 11 phút)
-              lateFromStart=Math.round(vaoMin-shift.start);
-              lateDeductMoney=lateFromStart*wageMin; totalLateDeduct+=lateDeductMoney; perBranch[br].lateDeduct+=lateDeductMoney;
-              // Phạt 3k = chỉ phút sau grace (VD 8:11 → 8 phút × 3k)
-              pLate3k=notificationState[notiKey]?0:lateMins*3000; totalPenalty3k+=pLate3k; perBranch[br].penalty3k+=pLate3k; } }
+          // Trễ dù 1 phút → trừ vào giờ làm
+          if(vaoMin>shift.start){
+            lateFromStart=Math.round(vaoMin-shift.start);
+            lateDeductMoney=lateFromStart*wageMin; totalLateDeduct+=lateDeductMoney; perBranch[br].lateDeduct+=lateDeductMoney;
+            lateDays++; if(!statusBadge){statusBadge='late'; statusLabel='Trễ';}
+            // Phạt 3k chỉ khi trễ quá grace (>3 phút)
+            if(vaoMin>allowed){
+              const raw=Math.round(vaoMin-allowed); lateMins=raw<=60?raw:0;
+              if(lateMins>0){ pLate3k=notificationState[notiKey]?0:lateMins*3000; totalPenalty3k+=pLate3k; perBranch[br].penalty3k+=pLate3k; }
+            }
+          }
 
           diffFromEnd=Math.round(raMin-shift.end);
           if(role==='lam_banh'){
@@ -651,8 +655,9 @@ function calculate() {
         // Bán hàng ngày thường: cap cả 2 đầu [shift.start, shift.end]
         {
           const isBanHangNormal=(shift&&role==='ban_hang'&&!isHoliday);
-          // Nếu đến trong grace (hoặc sớm hơn) → tính từ shift.start
-          const effectiveVaoMin=shift&&vaoMin<=shift.start+shift.grace ? shift.start : vaoMin;
+          // Luôn dùng giờ đến thực (không chấp nhận grace miễn trừ lương)
+          // Nếu đến trước ca → bắt đầu từ shift.start (không trả trước ca)
+          const effectiveVaoMin=shift&&vaoMin<shift.start ? shift.start : vaoMin;
           const payVaoMin=isBanHangNormal ? Math.max(effectiveVaoMin,shift.start) : effectiveVaoMin;
           const payRaMin=isBanHangNormal ? Math.min(raMin,shift.end) : raMin;
           const payMinsRaw=Math.max(0,Math.round(payRaMin-payVaoMin));
@@ -760,7 +765,9 @@ function renderDetail() {
     const otC=(r.vao||r.ra)?(otMins>0?`<span class="c-green">+${otMins}'</span>`:`<span class="c-muted">0</span>`):`<span class="c-muted">—</span>`;
     // Lương gốc = lương theo ca chuẩn (luôn chẵn), chưa trừ/cộng gì
     const earlyDeduct=Math.max(0,Math.round((r.expectedSalaryWage||0)-r.baseWage-(r.lateDeductMoney||0)));
-    const dayWage=r.baseWage+r.otEarnings+r.bonusAmt-(r.lateDeductMoney||0)-earlyDeduct-(r.pLate3k||0);
+    // dayWage = expectedSalaryWage - trừ trễ - trừ về sớm - phạt3k + OT + thưởng
+    // (không dùng baseWage và trừ thêm vì lateDeduct đã baked vào baseWage)
+    const dayWage=(r.expectedSalaryWage||0)+r.otEarnings+(r.bonusAmt||0)-(r.lateDeductMoney||0)-earlyDeduct-(r.pLate3k||0);
     const baseC=r.expectedSalaryWage>0?`<span class="c-bold">${fmtMoney(r.expectedSalaryWage)}</span>`:`<span class="c-muted">—</span>`;
     const lateDeductC=(r.lateDeductMoney||0)>0?`<span class="c-red">-${fmtMoney(r.lateDeductMoney)}</span>`:`<span class="c-muted">0</span>`;
     const earlyDeductC=earlyDeduct>0?`<span class="c-red">-${fmtMoney(earlyDeduct)}</span>`:`<span class="c-muted">0</span>`;
@@ -898,7 +905,7 @@ function buildStyledEmpSheet(emp) {
     const earlyMins=r.diffFromEnd<0?Math.abs(r.diffFromEnd):0;
     const otMins=wm>0?Math.round(r.otEarnings/wm):0;
     const earlyDeduct=Math.max(0,Math.round((r.expectedSalaryWage||0)-r.baseWage-(r.lateDeductMoney||0)));
-    const dayWage=Math.round(r.baseWage+(r.otEarnings||0)+(r.bonusAmt||0)-(r.lateDeductMoney||0)-earlyDeduct-(r.pLate3k||0));
+    const dayWage=Math.round((r.expectedSalaryWage||0)+(r.otEarnings||0)+(r.bonusAmt||0)-(r.lateDeductMoney||0)-earlyDeduct-(r.pLate3k||0));
     sumLateM+=(r.lateFromStart||0); sumPenM+=(r.lateMins||0); sumEarlyM+=earlyMins; sumOTM+=otMins;
     sumBase+=(r.expectedSalaryWage||0); sumLateD+=r.lateDeductMoney||0; sumEarlyD+=earlyDeduct;
     sumBonus+=r.bonusAmt||0; sumPen3k+=(r.pLate3k||0); sumDayWage+=dayWage;
